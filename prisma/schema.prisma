@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://funny_user:funny_password@localhost:5435/millenium"
+  // url      = env("DATABASE_URL")
+}
+
+model CategoriaArticulo {
+  id      Int @id @default(autoincrement())
+  nombre  String @db.VarChar(60)
+}
+
+model MarcaArticulo {
+  id      Int @id @default(autoincrement())
+  nombre  String @db.VarChar(60)
+}
+
+model Articulo {
+  id            Int @id @default(autoincrement())
+  codigo        String @unique @db.VarChar(60)
+  nombre        String @db.VarChar(120)
+  categoria     CategoriaArticulo? @references(fields: [id_categoria], references: [id])
+  id_categoria  Int?
+  marca         MarcaArticulo? @references(fields: [id_marca], references: [id])
+  id_marca      Int?
+  u_medida      String? @db.VarChar(20) // FIXME: Add an enum for this?
+  
+  depositos     ArticDepos[]
+}
+
+model Deposito {
+  id          Int @id @default(autoincrement())
+  direccion   String
+  cap_max     Int?
+
+  articulos   ArticDepos[]
+}
+
+model ArticDepos {
+  id            Int @id @default(autoincrement())
+  deposito      Deposito @relation(fields: [deposito_id], references: [id])
+  deposito_id   Int
+  articulo      Articulo @relation(fields: [articulo_id], references: [id])
+  articulo_id   Int
+  stock         Int @default(0)
+  stock_min     Int @default(0)
+
+  detalles_mov  DetalleMovimiento[]
+}
+
+enum TipoMovimiento {
+  INGRESO
+  EGRESO
+  TRANSFERENCIA
+}
+
+model TipoComprobante {
+  id            Int @id @default(autoincrement())
+  nombre        String @db.VarChar(60)
+  observacion   String? @db.VarChar(200)
+
+  movimientos   MovimientoStock[]
+}
+
+model MovimientoStock {
+  id                  Int @id @default(autoincrement())
+  dep_origen          Deposito? @relation(fields: [dep_origen_id], references: [id])
+  dep_origen_id       Int?
+  dep_destino         Deposito? @relation(fields: [dep_destino_id], references: [id])
+  dep_destino_id      Int?
+  fecha_hora          DateTime
+  tipo                TipoMovimiento
+  num_comprobante     String? @db.VarChar(40)
+  tipo_comprobante    TipoComprobante? @relation(fields: [id_tipo_comprobante], references: [id])
+  id_tipo_comprobante Int?
+
+  detalles_mov        DetalleMovimiento[]
+}
+
+model DetalleMovimiento {
+  id              Int @id @default(autoincrement())
+  movimiento      MovimientoStock @relation(fields: [id_movimiento], references: [id])
+  id_movimiento   Int
+  artic_depos     ArticDepos @relation(fields: [id_artic_depos], references: [id])
+  id_artic_depos  Int
+  cantidad        Int
+}
