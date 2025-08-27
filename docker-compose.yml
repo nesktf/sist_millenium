@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: funny_password
       POSTGRES_DB: millenium 
     ports:
-      - "5435:5435"
+      - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
