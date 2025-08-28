@@ -3,7 +3,7 @@ import "./globals.css";
 import { ReactNode } from "react";
 
 export const metadata = {
-  title: "Mi App",
+  title: "Millenium",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
