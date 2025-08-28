@@ -1,6 +1,7 @@
-let prods = [
-  {name: "test", desc: "Funny product", price: 1000000000000},
-];
+import { NextResponse } from "next/server";
+import { getProducts } from "@/app/prisma";
+
+
 
 // TODO:
 // 1. Registrar producto -> Registrar un nuevo producto. POST para productos
@@ -15,7 +16,8 @@ let prods = [
 
 // Endpoints
 export async function GET(req: Request) {
-  return Response.json(prods[0]);
+  const prods = await getProducts();
+  return NextResponse.json(prods);
 }
 export async function POST(req: Request) {
   return Response.error();
