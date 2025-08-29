@@ -12,30 +12,35 @@ export default function HomePage() {
     u_medida: "",
   });
 
-  const [error, setError] = useState(""); // 🔴 NUEVO: estado de error
+  const [error, setError] = useState(""); // estado de error
 
   useEffect(() => {
+    // fetchProductos() se ejecuta solo una vez al cargar la página
     fetchProductos();
   }, []);
 
   async function fetchProductos() {
-    const res = await fetch("/api/v1/prod");
-    const data = await res.json();
-    setProductos(data);
+    const res = await fetch("/api/v1/prod"); // hace una solicitud HTTP
+    const data = await res.json(); // Esto convierte la respuesta (res) en un objeto JavaScript
+    setProductos(data); // Actualiza el estado del componente con la lista de productos que obtuviste del servidor
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // se ejecuta cada vez que el usuario escribe algo en un campo de texto
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    // se va a ejecutar cuando el usuario envíe el formulario
+    e.preventDefault(); // e.preventDefault() evita que la pagina se recargue
 
     const res = await fetch("/api/v1/prod", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // fetch es una funcion para hacer solicitudes HTTP , await espera que la solicitud termine
+      method: "POST", // Metodo para enviar datos
+      headers: { "Content-Type": "application/json" }, // Indicamos que es formato json
       body: JSON.stringify({
-        codigo: form.codigo,
+        // body es el cuerpo de la solicitud - JSON.stringify convierte un objeto de js a json
+        codigo: form.codigo, // Enviamos los valores del form
         nombre: form.nombre,
         id_categoria: form.id_categoria ? Number(form.id_categoria) : undefined,
         id_marca: form.id_marca ? Number(form.id_marca) : undefined,
@@ -44,6 +49,7 @@ export default function HomePage() {
     });
 
     if (res.ok) {
+      // Si es exitoso el cambio, se limpia todo el formulario
       setForm({
         codigo: "",
         nombre: "",
@@ -51,11 +57,11 @@ export default function HomePage() {
         id_marca: "",
         u_medida: "",
       });
-      setError(""); // ✅ Limpiar error si todo salió bien
-      fetchProductos();
+      setError(""); // Limpiar error si todo salió bien
+      fetchProductos(); // Volver a cargar los productos (actualizamos)
     } else {
-      const err = await res.json();
-      setError(err.error || "Error al agregar producto"); // 🔴 Mostrar error
+      const err = await res.json(); // Si no es exitosa, obtenemos el error
+      setError(err.error || "Error al agregar producto"); // Mostrar error
     }
   };
 
@@ -67,7 +73,7 @@ export default function HomePage() {
         Productos
       </h1>
 
-      {/* 🔴 Mostrar mensaje de error si existe */}
+      {/* Mostrar mensaje de error si existe */}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {/* Formulario */}
@@ -76,11 +82,11 @@ export default function HomePage() {
         style={{ marginBottom: "2rem", display: "flex", gap: "1rem" }}
       >
         <input
-          name="codigo"
-          value={form.codigo}
-          onChange={handleChange}
+          name="codigo" // El nombre del campo, usado para identificarlo
+          value={form.codigo} // El valor actual del campo, tomado del estado "form"
+          onChange={handleChange} // // Función que se ejecuta cuando el usuario escribe algo
           placeholder="Código"
-          required
+          required // Indica que este campo es obligatorio
         />
         <input
           name="nombre"
@@ -147,7 +153,7 @@ export default function HomePage() {
   );
 }
 
-// estilos
+// estilos para las celdas
 const thStyle: React.CSSProperties = {
   textAlign: "left",
   padding: "0.75rem",
