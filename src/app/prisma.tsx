@@ -24,3 +24,16 @@ export async function createArticulo(data: {
     data,
   });
 }
+
+export async function updateArticulo(id: number, data: any) {
+  return await prisma.articulo.update({
+    where: { id },
+    data,
+  });
+}
+
+export async function deleteArticulo(id: number) {
+  return await prisma.articulo.delete({
+    where: { id },
+  });
+}
