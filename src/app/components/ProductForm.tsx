@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
+export default function ProductForm({
+  onSuccess,
+  producto,
+}: {
+  onSuccess: () => void;
+  producto?: any;
+}) {
   const [form, setForm] = useState({
     codigo: "",
     nombre: "",
@@ -12,6 +18,18 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
   });
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (producto) {
+      setForm({
+        codigo: producto.codigo || "",
+        nombre: producto.nombre || "",
+        id_categoria: producto.id_categoria?.toString() || "",
+        id_marca: producto.id_marca?.toString() || "",
+        u_medida: producto.u_medida || "",
+      });
+    }
+  }, [producto]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -19,16 +37,20 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const body = {
+      codigo: form.codigo,
+      nombre: form.nombre,
+      id_categoria: form.id_categoria.trim()
+        ? Number(form.id_categoria)
+        : undefined,
+      id_marca: form.id_marca.trim() ? Number(form.id_marca) : undefined,
+      u_medida: form.u_medida || undefined,
+    };
+
     const res = await fetch("/api/v1/prod", {
-      method: "POST",
+      method: producto ? "PUT" : "POST", // 👈 decide si crea o edita
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        codigo: form.codigo,
-        nombre: form.nombre,
-        id_categoria: form.id_categoria ? Number(form.id_categoria) : undefined,
-        id_marca: form.id_marca ? Number(form.id_marca) : undefined,
-        u_medida: form.u_medida || undefined,
-      }),
+      body: JSON.stringify(producto ? { id: producto.id, ...body } : body),
     });
 
     if (res.ok) {
@@ -40,10 +62,10 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
         u_medida: "",
       });
       setError("");
-      onSuccess(); // 👈 avisar al padre que se completó
+      onSuccess();
     } else {
       const err = await res.json();
-      setError(err.error || "Error al agregar producto");
+      setError(err.error || "Error al guardar producto");
     }
   };
 
@@ -85,7 +107,7 @@ export default function ProductForm({ onSuccess }: { onSuccess: () => void }) {
         onChange={handleChange}
         placeholder="Unidad"
       />
-      <button type="submit">Aceptar</button>
+      <button type="submit">{producto ? "Guardar cambios" : "Aceptar"}</button>
     </form>
   );
 }

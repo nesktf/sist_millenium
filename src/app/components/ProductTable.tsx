@@ -1,6 +1,14 @@
 "use client";
 
-export default function ProductTable({ productos }: { productos: any[] }) {
+export default function ProductTable({
+  productos,
+  onDelete,
+  onEdit,
+}: {
+  productos: any[];
+  onDelete: (id: number) => void;
+  onEdit: (producto: any) => void;
+}) {
   return (
     <table
       style={{
@@ -29,6 +37,20 @@ export default function ProductTable({ productos }: { productos: any[] }) {
             <td style={tdStyle}>{prod.categoria?.nombre || "-"}</td>
             <td style={tdStyle}>{prod.marca?.nombre || "-"}</td>
             <td style={tdStyle}>{prod.u_medida || "-"}</td>
+            <td style={tdStyle}>
+              <button
+                onClick={() => onEdit(prod)}
+                style={{ marginRight: "0.5rem" }}
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => onDelete(prod.id)}
+                style={{ color: "red" }}
+              >
+                Eliminar
+              </button>
+            </td>
           </tr>
         ))}
       </tbody>
