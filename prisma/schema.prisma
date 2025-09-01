@@ -32,7 +32,7 @@ model Articulo {
   nombre        String @db.VarChar(120)
   id_categoria  Int?
   id_marca      Int?
-  u_medida      String? @db.VarChar(20) // FIXME: Add an enum for this?
+  // u_medida      String? @db.VarChar(20) // FIXME: Add an enum for this?
   
   depositos     ArticDepos[]
   categoria     CategoriaArticulo? @relation(fields: [id_categoria], references: [id])
@@ -45,20 +45,21 @@ model Deposito {
   cap_max     Int?
 
   articulos       ArticDepos[]
-  movimientos_ori MovimientoStock[] @relation("origen")
-  movimientos_des MovimientoStock[] @relation("destino")
+  movimientos     MovimientoStock[]
+  // movimientos_ori MovimientoStock[] @relation("origen")
+  // movimientos_des MovimientoStock[] @relation("destino")
 }
 
 model ArticDepos {
   id            Int @id @default(autoincrement())
-  deposito_id   Int
-  articulo_id   Int
+  id_deposito   Int
+  id_articulo   Int
   stock         Int @default(0)
   stock_min     Int @default(0)
 
   detalles_mov  DetalleMovimiento[]
-  deposito      Deposito @relation(fields: [deposito_id], references: [id])
-  articulo      Articulo @relation(fields: [articulo_id], references: [id])
+  deposito      Deposito @relation(fields: [id_deposito], references: [id])
+  articulo      Articulo @relation(fields: [id_articulo], references: [id])
 }
 
 enum TipoMovimiento {
@@ -77,16 +78,18 @@ model TipoComprobante {
 
 model MovimientoStock {
   id                  Int @id @default(autoincrement())
-  dep_origen_id       Int?
-  dep_destino_id      Int?
+  id_deposito         Int
+  // dep_origen_id       Int?
+  // dep_destino_id      Int?
   fecha_hora          DateTime
   tipo                TipoMovimiento
-  num_comprobante     String? @db.VarChar(40)
+  num_comprobante     String? @unique @db.VarChar(40)
   id_tipo_comprobante Int?
 
   detalles_mov        DetalleMovimiento[]
-  dep_origen          Deposito? @relation("origen", fields: [dep_origen_id], references: [id])
-  dep_destino         Deposito? @relation("destino", fields: [dep_destino_id], references: [id])
+  deposito            Deposito @relation(fields: [id_deposito], references: [id])
+  // dep_origen          Deposito? @relation("origen", fields: [dep_origen_id], references: [id])
+  // dep_destino         Deposito? @relation("destino", fields: [dep_destino_id], references: [id])
   tipo_comprobante    TipoComprobante? @relation(fields: [id_tipo_comprobante], references: [id])
 }
 
