@@ -141,7 +141,7 @@ export class MovimientoStockData {
   private comprobante?: string;
 
   constructor(id_dst: DBId, tipo: TipoMovimiento, articulos: Array<ArticuloDepositoData>,
-              id_src?: DBId | null, comprobante?: string | null) {
+              comprobante?: string | null, id_src?: DBId | null)  {
     if (articulos.length == 0) {
       throw new Error("Invalid array size");
     }
@@ -156,17 +156,9 @@ export class MovimientoStockData {
     }
   }
 
-  public static fromIngreso(deposito: DBId, comprobante: string,
-                            articulos: Array<ArticuloDepositoData>): MovimientoStockData {
-    return new MovimientoStockData(deposito, TipoMovimiento.INGRESO, articulos, null, comprobante);
-  }
-  public static fromEgreso(deposito: DBId, comprobante: string,
-                           articulos: Array<ArticuloDepositoData>): MovimientoStockData {
-    return new MovimientoStockData(deposito, TipoMovimiento.EGRESO, articulos, null, comprobante);
-  }
-  public static fromTransfer(from: DBId, to: DBId,
+  public static fromTransfer(to: DBId, from: DBId, comprobante: string,
                              articulos: Array<ArticuloDepositoData>): MovimientoStockData {
-    return new MovimientoStockData(from, TipoMovimiento.TRANSFERENCIA, articulos, to, null);
+    return new MovimientoStockData(to, TipoMovimiento.TRANSFERENCIA, articulos, comprobante, from);
   }
 
   getDeposito(): DBId { return this.id_dst; }
@@ -208,6 +200,10 @@ async function updateArticDeposStock(artic: {id: DBId, stock: number},
 export async function registerMovimiento(movimiento: MovimientoStockData): Promise<RegistroMov> {
   let tipo = movimiento.getTipo();
   let articulos = movimiento.getArticulos();
+  // TODO: Chequear capacidad del depósito
+  // let total_things = articulos.reduce((prev, next) => {
+  //   return next.getStock();
+  // }, 0);
 
   const add_artic_depos = async (deposito: DBId) => {
     return await Promise.all(articulos.map(async (articulo) => {
@@ -353,3 +349,4 @@ export async function retrieveMovimientos(deposito: DBId) {
     }
   });
 }
+
