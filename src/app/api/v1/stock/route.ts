@@ -23,7 +23,7 @@ export async function GET(req: Request) {
         articulo: { include: { categoria: true, marca: true } },
         deposito: true,
       },
-      orderBy: { id_deposito: "asc" },
+      orderBy: { deposito_id: "asc" },
     });
 
     const data = filas.map((f) => ({

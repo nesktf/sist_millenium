@@ -180,8 +180,8 @@ async function updateArticDeposStock(artic: {id: DBId, stock: number},
                                      deposito: DBId): Promise<DBId> {
   var entry = await prisma.articDepos.findFirst({
     where: {
-      id_deposito: deposito,
-      id_articulo: artic.id,
+      deposito_id: deposito,
+      articulo_id: artic.id,
     }
   });
   if (!entry) {
@@ -191,8 +191,8 @@ async function updateArticDeposStock(artic: {id: DBId, stock: number},
     }
     entry = await prisma.articDepos.create({
       data: {
-        id_deposito: deposito,
-        id_articulo: artic.id,
+        deposito_id: deposito,
+        articulo_id: artic.id,
         stock: artic.stock,
       }
     })
@@ -270,7 +270,7 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
     data: {
       fecha_hora: date,
       tipo: tipo,
-      id_deposito: dst_deposito,
+      dep_destino_id: dst_deposito,
       num_comprobante: movimiento.getComprobante(),
     }
   });
@@ -300,7 +300,7 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
         data: {
           fecha_hora: date,
           tipo: tipo,
-          id_deposito: src_deposito,
+          dep_destino_id: src_deposito,
           num_comprobante: movimiento.getComprobante()+"-SRC",
         }
       })
@@ -339,7 +339,7 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
 
 export async function retrieveMovimientos(deposito: DBId) {
   let movs = await prisma.movimientoStock.findMany(({
-    where: { id_deposito: deposito },
+    where: { OR: [{ dep_origen_id: deposito }, { dep_destino_id: deposito }] },
   }));
   let mov_detalles = await Promise.all(movs.map(async (mov) => {
     return await prisma.detalleMovimiento.findMany({
@@ -354,7 +354,7 @@ export async function retrieveMovimientos(deposito: DBId) {
     }));
     let articulos = await Promise.all(artic_depos.map(async (artic) => {
       return await prisma.articulo.findUniqueOrThrow({
-        where: { id: artic.id_articulo }
+        where: { id: artic.articulo_id }
       });
     }));
     return articulos.map((articulo) => {
