@@ -26,7 +26,7 @@ async function getMovimientos(req: any) {
   if (movs.length == 0) {
     return NextResponse.json({ error: "No entries" }, { status: 400 });
   }
-  return NextResponse.json({ movimientos: movs });
+  return NextResponse.json({ id_deposito: Number(id_deposito), movimientos: movs });
 }
 
 async function getDepositos() {
@@ -100,27 +100,26 @@ async function makeMovimiento(req: any) {
 }
 
 export async function POST(req: Request) {
-  try {
-    let json = await req.json();
-    let action = json.action;
-    if (typeof(action) != "number") {
-      return NextResponse.json({ error: "No action" }, { status: 400 });
-    }
-
-    switch (action) {
-      case PostAction.get_depositos:
-        return await getDepositos();
-      case PostAction.get_movimientos:
-        return await getMovimientos(json);
-      case PostAction.new_deposito:
-        return makeDeposito(json);
-      case PostAction.new_movimiento:
-        return makeMovimiento(json);
-      default:
-        return NextResponse.json({error: "Invalid action" }, { status: 400 });
-    }
-  } catch (error: any) {
+  const handleError = (error: any) => {
     console.error(`Error POST deposito: ${error}`);
     return NextResponse.json({ error: `${error}`}, { status: 500 });
+  }
+  let json = await req.json();
+  let action = json.action;
+  if (typeof(action) != "number") {
+    return NextResponse.json({ error: "No action" }, { status: 400 });
+  }
+
+  switch (action) {
+    case PostAction.get_depositos:
+      return await getDepositos().catch(handleError);
+    case PostAction.get_movimientos:
+      return await getMovimientos(json).catch(handleError);
+    case PostAction.new_deposito:
+      return makeDeposito(json).catch(handleError);
+    case PostAction.new_movimiento:
+      return makeMovimiento(json).catch(handleError);
+    default:
+      return NextResponse.json({error: "Invalid action" }, { status: 400 });
   }
 }

@@ -183,11 +183,11 @@ async function updateArticDeposStock(artic: {id: DBId, stock: number},
       id_articulo: artic.id,
     }
   });
-  var new_stock = artic.stock;
-  if (new_stock < 0) {
-    throw new Error("Invalid stock");
-  }
   if (!entry) {
+    let new_stock = artic.stock;
+    if (new_stock < 0) {
+      throw new Error("Invalid stock");
+    }
     entry = await prisma.articDepos.create({
       data: {
         id_deposito: deposito,
@@ -195,19 +195,20 @@ async function updateArticDeposStock(artic: {id: DBId, stock: number},
         stock: artic.stock,
       }
     })
+    return entry.id;
   } else {
-    new_stock = entry.stock + artic.stock;
-  }
-  if (new_stock < 0) {
-    throw new Error("Invalid stock");
-  }
+    let new_stock = entry.stock + artic.stock;
+    if (new_stock < 0) {
+      throw new Error("Invalid stock");
+    }
 
-  // Update stock
-  await prisma.articDepos.update({
-    where: { id: artic.id },
-    data: { stock: new_stock },
-  })
-  return entry.id;
+    // Update stock
+    await prisma.articDepos.update({
+      where: { id: entry.id },
+      data: { stock: new_stock },
+    })
+    return entry.id;
+  }
 }
 
 export async function registerMovimiento(movimiento: MovimientoStockData): Promise<RegistroMov> {
@@ -218,7 +219,7 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
   //   return next.getStock();
   // }, 0);
 
-  const add_artic_depos = async (deposito: DBId) => {
+  const add_artic_depos = async (deposito: DBId, id_mov: DBId) => {
     return await Promise.all(articulos.map(async (articulo) => {
       assert(articulo.getStock() > 0, "Stock inválido");
       let data = {id: articulo.getId(), stock: articulo.getStock()};
@@ -229,17 +230,18 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
         // Solo pueden haberse actualizado o creado entradas
         assert(id_artic_depos != null, "Ingreso no puede eliminar articulos_depos");
         return {
-          id_movimiento: dst_entry.id,
+          id_movimiento: id_mov,
           id_artic_depos: id_artic_depos,
           cantidad: articulos[idx].getStock()
         }
       });
     });
   };
-  const subs_artic_depos = async (deposito: DBId) => {
+  const subs_artic_depos = async (deposito: DBId, id_mov: DBId) => {
     let detalles = await Promise.all(articulos.map(async (articulo) => {
-      assert(articulo.getStock() < 0, "Stock inválido");
-      let data = {id: articulo.getId(), stock: articulo.getStock()};
+      let count = -articulo.getStock();
+      assert(count < 0, "Stock inválido");
+      let data = {id: articulo.getId(), stock: count};
       return await updateArticDeposStock(data, deposito);
     }))
     .then((articulos_depos) => {
@@ -249,9 +251,9 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
         }
         // FIXME: Qué detalle crear cuando un artículo en depósito es eliminado?
         return {
-          id_movimiento: dst_entry.id,
+          id_movimiento: id_mov,
           id_artic_depos: id_artic_depos,
-          cantidad: articulos[idx].getStock(),
+          cantidad: -articulos[idx].getStock(),
         }
       });
     });
@@ -272,49 +274,63 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
     }
   });
   var src_entry_out: { id: DBId, date: Date } | null = null;
-  if (tipo == TipoMovimiento.INGRESO) {
-    // 2. Crear o actualizar artículos en depósitos con más stock
-    let detalles = await add_artic_depos(dst_deposito);
+  try {
+    if (tipo == TipoMovimiento.INGRESO) {
+      // 2. Crear o actualizar artículos en depósitos con más stock
+      let detalles = await add_artic_depos(dst_deposito, dst_entry.id);
 
-    // 3. Crear detalles de movimientos con los artículos de depósito modificados/creados
-    await Promise.all(detalles.map(async (detalle) => {
-      await prisma.detalleMovimiento.create({data: detalle});
-    }));
-  } else if (tipo == TipoMovimiento.EGRESO) {
-    // 2. Actualizar artículos en depósitos con menos stock
-    let detalles = await subs_artic_depos(dst_deposito);
+      // 3. Crear detalles de movimientos con los artículos de depósito modificados/creados
+      await Promise.all(detalles.map(async (detalle) => {
+        await prisma.detalleMovimiento.create({data: detalle});
+      }));
+    } else if (tipo == TipoMovimiento.EGRESO) {
+      // 2. Actualizar artículos en depósitos con menos stock
+      let detalles = await subs_artic_depos(dst_deposito, dst_entry.id);
 
-    // 3. Crear detalles de movimientos con los artículos de depósito modificados
-    await Promise.all(detalles.map(async (detalle) => {
-      await prisma.detalleMovimiento.create({data: detalle});
-    }));
-  } else if (tipo == TipoMovimiento.TRANSFERENCIA) {
-    // 2. Crear otro movimiento para el depósito fuente
-    let src_deposito = movimiento.getFuente();
-    assert(src_deposito != null);
-    let src_entry = await prisma.movimientoStock.create({
-      data: {
-        fecha_hora: date,
-        tipo: tipo,
-        id_deposito: src_deposito,
-        num_comprobante: movimiento.getComprobante(),
-      }
-    })
-    src_entry_out = { id: src_entry.id, date: date};
+      // 3. Crear detalles de movimientos con los artículos de depósito modificados
+      await Promise.all(detalles.map(async (detalle) => {
+        await prisma.detalleMovimiento.create({data: detalle});
+      }));
+    } else if (tipo == TipoMovimiento.TRANSFERENCIA) {
+      // 2. Crear otro movimiento para el depósito fuente
+      let src_deposito = movimiento.getFuente();
+      assert(src_deposito != null);
+      let src_entry = await prisma.movimientoStock.create({
+        data: {
+          fecha_hora: date,
+          tipo: tipo,
+          id_deposito: src_deposito,
+          num_comprobante: movimiento.getComprobante()+"-SRC",
+        }
+      })
+      src_entry_out = { id: src_entry.id, date: date};
 
-    // 3. Actualizar artículos en el depósito fuente
-    let src_detalles = await subs_artic_depos(src_deposito);
+      // 3. Actualizar artículos en el depósito fuente
+      let src_detalles = await subs_artic_depos(src_deposito, src_entry.id);
+      console.log(src_detalles);
 
-    // 4. Crear o actualizar artículos en el depósito destino
-    let dst_detalles = await add_artic_depos(dst_deposito);
+      // 4. Crear o actualizar artículos en el depósito destino
+      let dst_detalles = await add_artic_depos(dst_deposito, dst_entry.id);
+      console.log(dst_detalles);
 
-    // 5. Cargar todos los detalles
-    await Promise.all(src_detalles.map(async (detalle) => {
-      await prisma.detalleMovimiento.create({data: detalle});
-    }));
-    await Promise.all(dst_detalles.map(async (detalle) => {
-      await prisma.detalleMovimiento.create({data: detalle});
-    }));
+      // 5. Cargar todos los detalles
+      await Promise.all(src_detalles.map(async (detalle) => {
+        await prisma.detalleMovimiento.create({data: detalle});
+      }));
+      await Promise.all(dst_detalles.map(async (detalle) => {
+        await prisma.detalleMovimiento.create({data: detalle});
+      }));
+    }
+  } catch (err: any) {
+    if (src_entry_out != null) {
+      await prisma.movimientoStock.delete({
+        where: { id: src_entry_out.id }
+      });
+    }
+    await prisma.movimientoStock.delete({
+      where: { id: dst_entry.id }
+    });
+    throw err;
   }
 
   return { src: src_entry_out, dst: { id: dst_entry.id, date: dst_entry.fecha_hora } };
@@ -346,7 +362,6 @@ export async function retrieveMovimientos(deposito: DBId) {
   })); 
   return movs.map((mov, idx_mov: number) => {
     return {
-      id_deposito: mov.id_deposito,
       fecha: mov.fecha_hora,
       tipo: mov.tipo,
       comprobante: mov.num_comprobante,
