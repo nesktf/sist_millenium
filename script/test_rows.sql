@@ -8,11 +8,11 @@ WHERE NOT EXISTS (
 );
 
 -- 2) Artículos (idempotente, acá SÍ hay UNIQUE en codigo)
-INSERT INTO "Articulo" ("codigo","nombre","u_medida")
+INSERT INTO "Articulo" ("codigo","nombre")
 VALUES 
-  ('abc123','GTX 2080TI','m'),
-  ('abc456','GTX 3080TI','m'),
-  ('abc789','GTX 4080TI','m')
+  ('abc123','GTX 2080TI'),
+  ('abc456','GTX 3080TI'),
+  ('abc789','GTX 4080TI')
 ON CONFLICT ("codigo") DO NOTHING;
 
 -- 3) Stock para abc123 en Depósito Principal (idempotente)
