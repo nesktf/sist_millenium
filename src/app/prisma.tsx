@@ -140,8 +140,8 @@ export class MovimientoStockData {
   private id_src?: DBId;
   private comprobante?: string;
 
-  private constructor(id_dst: DBId, tipo: TipoMovimiento, articulos: Array<ArticuloDepositoData>,
-                      id_src?: DBId | null, comprobante?: string | null) {
+  constructor(id_dst: DBId, tipo: TipoMovimiento, articulos: Array<ArticuloDepositoData>,
+              id_src?: DBId | null, comprobante?: string | null) {
     if (articulos.length == 0) {
       throw new Error("Invalid array size");
     }
@@ -184,7 +184,7 @@ type RegistroMov = {
 
 // Update or delete existing artic_depos entry
 async function updateArticDeposStock(artic: {id: DBId, stock: number},
-                                     deposito: DBId): Promise<DBId | null> {
+                                     deposito: DBId): Promise<DBId> {
   let entry = await prisma.articDepos.findFirstOrThrow({
     where: {
       id_deposito: deposito,
@@ -195,14 +195,6 @@ async function updateArticDeposStock(artic: {id: DBId, stock: number},
   let new_stock = artic.stock + artic.stock;
   if (new_stock < 0) {
     throw new Error("Invalid stock");
-  }
-
-  if (new_stock == 0) {
-    // Delete entry
-    await prisma.articDepos.delete({
-      where: { id: artic.id }
-    });
-    return null
   }
 
   // Update stock
@@ -280,7 +272,7 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
       await prisma.detalleMovimiento.create({data: detalle});
     }));
   } else if (tipo == TipoMovimiento.EGRESO) {
-    // 2. Eliminar o actualizar artículos en depósitos con menos stock
+    // 2. Actualizar artículos en depósitos con menos stock
     let detalles = await subs_artic_depos(dst_deposito);
 
     // 3. Crear detalles de movimientos con los artículos de depósito modificados
@@ -301,10 +293,10 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
     })
     src_entry_out = { id: src_entry.id, date: date};
 
-    // 3. Eliminar o actualizar artículos en el depósito fuente
+    // 3. Actualizar artículos en el depósito fuente
     let src_detalles = await subs_artic_depos(src_deposito);
 
-    // 4. crear o actualizar artículos en el depósito destino
+    // 4. Crear o actualizar artículos en el depósito destino
     let dst_detalles = await add_artic_depos(dst_deposito);
 
     // 5. Cargar todos los detalles
@@ -319,3 +311,45 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
   return { src: src_entry_out, dst: { id: dst_entry.id, date: dst_entry.fecha_hora } };
 }
 
+export async function retrieveMovimientos(deposito: DBId) {
+  let movs = await prisma.movimientoStock.findMany(({
+    where: { id_deposito: deposito },
+  }));
+  let mov_detalles = await Promise.all(movs.map(async (mov) => {
+    return await prisma.detalleMovimiento.findMany({
+      where: { id_movimiento: mov.id}
+    });
+  }));
+  let mov_articulos = await Promise.all(mov_detalles.map(async (mov_detalle) => {
+    let artic_depos = await Promise.all(mov_detalle.map(async (detalle) => {
+      return await prisma.articDepos.findUniqueOrThrow({
+        where: { id: detalle.id_artic_depos }
+      });
+    }));
+    let articulos = await Promise.all(artic_depos.map(async (artic) => {
+      return await prisma.articulo.findUniqueOrThrow({
+        where: { id: artic.id_articulo }
+      });
+    }));
+    return articulos.map((articulo) => {
+      return { id: articulo.id, codigo: articulo.codigo, nombre: articulo.nombre };
+    });
+  })); 
+  return movs.map((mov, idx_mov: number) => {
+    return {
+      id_deposito: mov.id_deposito,
+      fecha: mov.fecha_hora,
+      tipo: mov.tipo,
+      comprobante: mov.num_comprobante,
+      articulos: mov_detalles[idx_mov].map((detalle, idx_det: number) => {
+        let articulo = mov_articulos[idx_mov][idx_det];
+        return {
+          id_articulo: articulo.id,
+          nombre: articulo.nombre,
+          codigo: articulo.codigo,
+          cantidad: detalle.cantidad,
+        }
+      }),
+    }
+  });
+}
