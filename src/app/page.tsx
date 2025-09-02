@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import ProductTable from "./components/ProductTable";
 import ProductForm from "./components/ProductForm";
 import Modal from "./components/Modal";
@@ -53,17 +54,14 @@ export default function HomePage() {
   // 👇 Eliminar producto
   async function handleDelete(id: number) {
     if (!confirm("¿Seguro que deseas eliminar este producto?")) return;
-
     const res = await fetch(`/api/v1/prod?id=${id}`, { method: "DELETE" });
-    if (res.ok) {
-      fetchProductos();
-    } else {
+    if (res.ok) fetchProductos();
+    else {
       const err = await res.json();
       console.error(err.error || "Error al eliminar producto");
     }
   }
 
-  // 👇 Editar producto
   function handleEdit(producto: any) {
     setEditingProduct(producto);
     setShowForm(true);
@@ -71,60 +69,23 @@ export default function HomePage() {
 
   return (
     <main style={{ padding: "2rem" }}>
-      <h1
-        style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}
-      >
+      <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}>
         Productos
       </h1>
-
-      {/* 🔎 Filtros */}
-      <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-        <input
-          type="text"
-          placeholder="Código"
-          value={filters.codigo}
-          onChange={(e) => {
-            setFilters({ ...filters, codigo: e.target.value });
-            setPage(1);
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+        <button
+          onClick={() => {
+            setEditingProduct(null);
+            setShowForm(true);
           }}
-        />
-        <input
-          type="text"
-          placeholder="Nombre"
-          value={filters.nombre}
-          onChange={(e) => {
-            setFilters({ ...filters, nombre: e.target.value });
-            setPage(1);
-          }}
-        />
-        <input
-          type="text"
-          placeholder="Categoría"
-          value={filters.categoria}
-          onChange={(e) => {
-            setFilters({ ...filters, categoria: e.target.value });
-            setPage(1);
-          }}
-        />
-        <input
-          type="text"
-          placeholder="Marca"
-          value={filters.marca}
-          onChange={(e) => {
-            setFilters({ ...filters, marca: e.target.value });
-            setPage(1);
-          }}
-        />
+        >
+          Agregar producto
+      </button>
+        <Link href="/stock">
+          <button>Consultar stock</button>
+        </Link>
       </div>
 
-      <button
-        onClick={() => {
-          setEditingProduct(null);
-          setShowForm(true);
-        }}
-      >
-        Agregar producto
-      </button>
 
       {/* 📊 Tabla */}
       <ProductTable
@@ -160,10 +121,7 @@ export default function HomePage() {
           <h2>{editingProduct ? "Editar producto" : "Agregar producto"}</h2>
           <ProductForm
             producto={editingProduct}
-            onSuccess={() => {
-              fetchProductos();
-              setShowForm(false);
-            }}
+            onSuccess={() => { fetchProductos(); setShowForm(false); }}
           />
         </Modal>
       )}

@@ -2,6 +2,7 @@ import assert from "assert";
 import { PrismaClient, TipoMovimiento } from "../generated/prisma";
 
 const prisma = new PrismaClient();
+export default prisma;
 
 type DBId = number;
 type DBData<T> = {id: DBId, data: T};
