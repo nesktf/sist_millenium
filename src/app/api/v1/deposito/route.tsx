@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   ArticuloDepositoData,
   DepositoData,
@@ -10,9 +10,11 @@ import {
 } from "@/app/prisma";
 import { TipoMovimiento } from "@/generated/prisma";
 
-enum GetAction {
-  get_depositos,
-  get_movimientos,
+enum PostAction {
+  get_depositos = 0,
+  get_movimientos = 1,
+  new_deposito = 2,
+  new_movimiento = 3,
 };
 
 async function getMovimientos(req: any) {
@@ -44,41 +46,14 @@ async function getDepositos() {
   });
 }
 
-export async function GET(req: Request) {
-  let json = await req.json();
-  let action = json.action;
-  if (typeof(action) != "number") {
-    return NextResponse.json({ error: "No action" }, { status: 400 });
-  }
-
-  try {
-    switch (action) {
-      case GetAction.get_depositos:
-        return await getDepositos();
-      case GetAction.get_movimientos:
-        return await getMovimientos(json);
-      default:
-        return NextResponse.json({error: "Invalid action" }, { status: 400 });
-    }
-  } catch(error: any) {
-    console.error(`Error GET deposito: ${error}`);
-    return NextResponse.json({ error: `${error}`}, { status: 500 });
-  }
-}
-
-enum PostAction {
-  new_deposito = 0,
-  new_movimiento = 1,
-};
-
 async function makeDeposito(req: any) {
   let { direccion, capacidad } = req;
   if (typeof(direccion) != "string") {
     return NextResponse.json({ error: "Dirección de depósito inválida"}, { status: 400 });
   }
-  if (typeof(capacidad) != "number" || typeof(capacidad) != "undefined") {
-    return NextResponse.json({ error: "Capacidad de depósito inválida"}, { status: 400 });
-  }
+  // if (typeof(capacidad) != "number" || typeof(capacidad) != "undefined") {
+  //   return NextResponse.json({ error: "Capacidad de depósito inválida"}, { status: 400 });
+  // }
   let id = await registerDeposito(new DepositoData(direccion, capacidad));
   return NextResponse.json({id_deposito: id});
 }
@@ -88,8 +63,8 @@ async function makeMovimiento(req: any) {
   if (typeof(id_dst) != "number") {
     return NextResponse.json({ error: "Deposito invalido"}, { status: 400 });
   }
-  if (tipo != TipoMovimiento.INGRESO ||
-      tipo != TipoMovimiento.TRANSFERENCIA ||
+  if (tipo != TipoMovimiento.INGRESO &&
+      tipo != TipoMovimiento.TRANSFERENCIA &&
       tipo != TipoMovimiento.EGRESO) {
     return NextResponse.json({ error: "Tipo de movimiento invalido"}, { status: 400 });
   }
@@ -125,14 +100,18 @@ async function makeMovimiento(req: any) {
 }
 
 export async function POST(req: Request) {
-  let json = await req.json();
-  let action = json.action;
-  if (typeof(action) != "number") {
-    return NextResponse.json({ error: "No action" }, { status: 400 });
-  }
-
   try {
+    let json = await req.json();
+    let action = json.action;
+    if (typeof(action) != "number") {
+      return NextResponse.json({ error: "No action" }, { status: 400 });
+    }
+
     switch (action) {
+      case PostAction.get_depositos:
+        return await getDepositos();
+      case PostAction.get_movimientos:
+        return await getMovimientos(json);
       case PostAction.new_deposito:
         return makeDeposito(json);
       case PostAction.new_movimiento:

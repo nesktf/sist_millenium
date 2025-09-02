@@ -177,14 +177,27 @@ type RegistroMov = {
 // Update or delete existing artic_depos entry
 async function updateArticDeposStock(artic: {id: DBId, stock: number},
                                      deposito: DBId): Promise<DBId> {
-  let entry = await prisma.articDepos.findFirstOrThrow({
+  var entry = await prisma.articDepos.findFirst({
     where: {
       id_deposito: deposito,
       id_articulo: artic.id,
     }
   });
-
-  let new_stock = artic.stock + artic.stock;
+  var new_stock = artic.stock;
+  if (new_stock < 0) {
+    throw new Error("Invalid stock");
+  }
+  if (!entry) {
+    entry = await prisma.articDepos.create({
+      data: {
+        id_deposito: deposito,
+        id_articulo: artic.id,
+        stock: artic.stock,
+      }
+    })
+  } else {
+    new_stock = entry.stock + artic.stock;
+  }
   if (new_stock < 0) {
     throw new Error("Invalid stock");
   }
