@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ProductTable from "./components/ProductTable";
 import ProductForm from "./components/ProductForm";
 import Modal from "./components/Modal";
+import Link from 'next/link';
 
 export default function HomePage() {
   const [productos, setProductos] = useState<any[]>([]);
@@ -55,6 +56,12 @@ export default function HomePage() {
       >
         Agregar producto
       </button>
+      {/* Boton Ver Movimientos */}
+        <Link href="/movimientos">
+          <button>
+            Ver Movimientos
+          </button>
+        </Link>
 
       <ProductTable
         productos={productos}
