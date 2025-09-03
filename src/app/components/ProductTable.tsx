@@ -24,7 +24,6 @@ export default function ProductTable({
           <th style={thStyle}>Nombre</th>
           <th style={thStyle}>Categoría</th>
           <th style={thStyle}>Marca</th>
-          <th style={thStyle}>Unidad</th>
           <th style={thStyle}>Acciones</th>
         </tr>
       </thead>
@@ -36,7 +35,6 @@ export default function ProductTable({
             <td style={tdStyle}>{prod.nombre}</td>
             <td style={tdStyle}>{prod.categoria?.nombre || "-"}</td>
             <td style={tdStyle}>{prod.marca?.nombre || "-"}</td>
-            <td style={tdStyle}>{prod.u_medida || "-"}</td>
             <td style={tdStyle}>
               <button
                 onClick={() => onEdit(prod)}

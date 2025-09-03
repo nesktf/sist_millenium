@@ -16,14 +16,14 @@ VALUES
 ON CONFLICT ("codigo") DO NOTHING;
 
 -- 3) Stock para abc123 en Depósito Principal (idempotente)
-INSERT INTO "ArticDepos" ("deposito_id","articulo_id","stock","stock_min")
+INSERT INTO "ArticDepos" ("id_deposito", "id_articulo", "stock", "stock_min")
 SELECT d.id, a.id, 12, 3
 FROM "Deposito" d
 JOIN "Articulo" a ON a.codigo = 'abc123'
 WHERE d."direccion" = 'Depósito Principal'
   AND NOT EXISTS (
     SELECT 1 FROM "ArticDepos" ad 
-    WHERE ad."deposito_id" = d.id AND ad."articulo_id" = a.id
+    WHERE ad."id_deposito" = d.id AND ad."id_articulo" = a.id
   );
 
 COMMIT;
@@ -31,6 +31,6 @@ COMMIT;
 -- 4) Chequeo
 SELECT ad.id, a.codigo, d.direccion, ad.stock, ad.stock_min
 FROM "ArticDepos" ad
-JOIN "Articulo" a ON a.id = ad.articulo_id
-JOIN "Deposito" d ON d.id = ad.deposito_id
+JOIN "Articulo" a ON a.id = ad.id_articulo
+JOIN "Deposito" d ON d.id = ad.id_deposito
 ORDER BY a.codigo, d.direccion;
