@@ -5,12 +5,13 @@ import  prisma  from "@/app/prisma";
 
 export async function GET() {
   try {
+    // Obtener todos los movimientos con sus detalles y artículos relacionados
+    // CAMBIO: Incluir solo un depósito por movimiento
     const movimientos = await prisma.movimientoStock.findMany({
-      // No hay cláusula 'where', por lo que trae todos los movimientos
       include: {
+        
+        deposito: true,
         tipo_comprobante: true,
-        dep_origen: true,
-        dep_destino: true,
         detalles_mov: {
           include: {
             artic_depos: {
@@ -26,7 +27,7 @@ export async function GET() {
       },
     });
 
-    // Transforma los datos para que el frontend los pueda usar fácilmente
+    // Transformar los datos para la respuesta
     const resultado = movimientos.flatMap((mov) =>
       mov.detalles_mov.map((detalle) => ({
         id_mov_stock: mov.id,
@@ -35,7 +36,8 @@ export async function GET() {
         comprobante: `${mov.tipo_comprobante?.nombre || ''} - ${mov.num_comprobante || ''}`,
         articulo: detalle.artic_depos.articulo.nombre,
         cantidad: detalle.cantidad,
-        deposito: `${mov.dep_origen?.direccion || 'Externo'} → ${mov.dep_destino?.direccion || 'Externo'}`,
+        // CAMBIO: Ahora solo hay un depósito por movimiento
+        deposito: mov.deposito.direccion,
       }))
     );
 

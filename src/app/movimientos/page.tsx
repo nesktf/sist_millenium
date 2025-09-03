@@ -9,7 +9,7 @@ export default function MovimientosPage() {
   const [movimientos, setMovimientos] = useState([]);
   const [depositos, setDepositos] = useState<any[]>([]);
   const [selectedDeposito, setSelectedDeposito] = useState('all');
-  const [isLoading, setIsLoading] = useState(true); // <--- 1. AÑADIMOS EL ESTADO DE CARGA
+  const [isLoading, setIsLoading] = useState(true); 
 
   useEffect(() => {
     async function fetchDepositos() {

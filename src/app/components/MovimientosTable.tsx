@@ -9,7 +9,7 @@ interface Movimiento {
   cantidad: number;
 }
 
-// El componente ahora recibe 'isLoading'
+
 export default function MovimientosTable({ movimientos, isLoading }: { movimientos: Movimiento[], isLoading: boolean }) {
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
@@ -23,7 +23,7 @@ export default function MovimientosTable({ movimientos, isLoading }: { movimient
         </tr>
       </thead>
       <tbody>
-        {/* --- LÓGICA DE MENSAJES CORREGIDA --- */}
+        
         {isLoading ? (
           <tr>
             <td colSpan={5} style={{ textAlign: 'center', padding: '16px' }}>
