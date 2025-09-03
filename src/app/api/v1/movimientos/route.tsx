@@ -1,7 +1,7 @@
 // app/api/v1/movimientos/route.tsx
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/app/prisma";
+import  prisma  from "@/app/prisma";
 
 export async function GET() {
   try {
