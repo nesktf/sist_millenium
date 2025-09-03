@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 
 export default function ProductForm({
   onSuccess,
@@ -14,9 +15,7 @@ export default function ProductForm({
     nombre: "",
     id_categoria: "",
     id_marca: "",
-    u_medida: "",
   });
-  const [error, setError] = useState("");
 
   useEffect(() => {
     if (producto) {
@@ -25,7 +24,6 @@ export default function ProductForm({
         nombre: producto.nombre || "",
         id_categoria: producto.id_categoria?.toString() || "",
         id_marca: producto.id_marca?.toString() || "",
-        u_medida: producto.u_medida || "",
       });
     }
   }, [producto]);
@@ -44,7 +42,6 @@ export default function ProductForm({
         ? Number(form.id_categoria)
         : undefined,
       id_marca: form.id_marca.trim() ? Number(form.id_marca) : undefined,
-      u_medida: form.u_medida || undefined,
     };
 
     const res = await fetch("/api/v1/prod", {
@@ -59,13 +56,26 @@ export default function ProductForm({
         nombre: "",
         id_categoria: "",
         id_marca: "",
-        u_medida: "",
       });
-      setError("");
+
+      Swal.fire({
+        title: "¡Éxito!",
+        text: producto
+          ? "El producto fue actualizado correctamente."
+          : "El producto fue agregado correctamente.",
+        icon: "success",
+        confirmButtonText: "Aceptar",
+      });
+
       onSuccess();
     } else {
       const err = await res.json();
-      setError(err.error || "Error al guardar producto");
+      Swal.fire({
+        title: "Error",
+        text: err.error || "Error al guardar producto",
+        icon: "error",
+        confirmButtonText: "Cerrar",
+      });
     }
   };
 
@@ -74,7 +84,6 @@ export default function ProductForm({
       onSubmit={handleSubmit}
       style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
     >
-      {error && <p style={{ color: "red" }}>{error}</p>}
       <input
         name="codigo"
         value={form.codigo}
@@ -100,12 +109,6 @@ export default function ProductForm({
         value={form.id_marca}
         onChange={handleChange}
         placeholder="Marca (ID)"
-      />
-      <input
-        name="u_medida"
-        value={form.u_medida}
-        onChange={handleChange}
-        placeholder="Unidad"
       />
       <button type="submit">{producto ? "Guardar cambios" : "Aceptar"}</button>
     </form>
