@@ -101,6 +101,12 @@ export default function HomePage() {
         >
           Agregar producto
         </button>
+      {/* Boton Ver Movimientos */}
+        <Link href="/movimientos">
+          <button>
+            Ver Movimientos
+          </button>
+        </Link>
         <Link href="/stock">
           <button>Consultar stock</button>
         </Link>
