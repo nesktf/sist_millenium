@@ -5,6 +5,7 @@ import Link from "next/link";
 import ProductTable from "./components/ProductTable";
 import ProductForm from "./components/ProductForm";
 import Modal from "./components/Modal";
+import Swal from "sweetalert2";
 
 export default function HomePage() {
   const [productos, setProductos] = useState<any[]>([]);
@@ -51,14 +52,31 @@ export default function HomePage() {
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  // 👇 Eliminar producto
+  // 👇 Eliminar producto con SweetAlert
   async function handleDelete(id: number) {
-    if (!confirm("¿Seguro que deseas eliminar este producto?")) return;
+    const result = await Swal.fire({
+      title: "¿Estás seguro?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (!result.isConfirmed) return;
+
     const res = await fetch(`/api/v1/prod?id=${id}`, { method: "DELETE" });
-    if (res.ok) fetchProductos();
-    else {
+    if (res.ok) {
+      fetchProductos();
+      Swal.fire(
+        "Eliminado",
+        "El producto ha sido eliminado con éxito",
+        "success"
+      );
+    } else {
       const err = await res.json();
-      console.error(err.error || "Error al eliminar producto");
+      Swal.fire("Error", err.error || "Error al eliminar producto", "error");
     }
   }
 
@@ -69,7 +87,9 @@ export default function HomePage() {
 
   return (
     <main style={{ padding: "2rem" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}>
+      <h1
+        style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}
+      >
         Productos
       </h1>
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
@@ -80,7 +100,7 @@ export default function HomePage() {
           }}
         >
           Agregar producto
-      </button>
+        </button>
       {/* Boton Ver Movimientos */}
         <Link href="/movimientos">
           <button>
@@ -92,6 +112,35 @@ export default function HomePage() {
         </Link>
       </div>
 
+      {/* 🔎 Filtros */}
+      <div style={{ marginBottom: "1rem", display: "flex", gap: "0.5rem" }}>
+        <input
+          type="text"
+          placeholder="Filtrar por código"
+          value={filters.codigo}
+          onChange={(e) => setFilters({ ...filters, codigo: e.target.value })}
+        />
+        <input
+          type="text"
+          placeholder="Filtrar por nombre"
+          value={filters.nombre}
+          onChange={(e) => setFilters({ ...filters, nombre: e.target.value })}
+        />
+        <input
+          type="text"
+          placeholder="Filtrar por categoría"
+          value={filters.categoria}
+          onChange={(e) =>
+            setFilters({ ...filters, categoria: e.target.value })
+          }
+        />
+        <input
+          type="text"
+          placeholder="Filtrar por marca"
+          value={filters.marca}
+          onChange={(e) => setFilters({ ...filters, marca: e.target.value })}
+        />
+      </div>
 
       {/* 📊 Tabla */}
       <ProductTable
@@ -127,7 +176,10 @@ export default function HomePage() {
           <h2>{editingProduct ? "Editar producto" : "Agregar producto"}</h2>
           <ProductForm
             producto={editingProduct}
-            onSuccess={() => { fetchProductos(); setShowForm(false); }}
+            onSuccess={() => {
+              fetchProductos();
+              setShowForm(false);
+            }}
           />
         </Modal>
       )}
