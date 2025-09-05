@@ -10,7 +10,7 @@ import {
 } from "@/app/prisma";
 import { TipoMovimiento } from "@/generated/prisma";
 
-enum PostAction {
+export enum DepositoPostAction {
   get_depositos = 0,
   get_movimientos = 1,
   new_deposito = 2,
@@ -111,13 +111,13 @@ export async function POST(req: Request) {
   }
 
   switch (action) {
-    case PostAction.get_depositos:
+    case DepositoPostAction.get_depositos:
       return await getDepositos().catch(handleError);
-    case PostAction.get_movimientos:
+    case DepositoPostAction.get_movimientos:
       return await getMovimientos(json).catch(handleError);
-    case PostAction.new_deposito:
+    case DepositoPostAction.new_deposito:
       return makeDeposito(json).catch(handleError);
-    case PostAction.new_movimiento:
+    case DepositoPostAction.new_movimiento:
       return makeMovimiento(json).catch(handleError);
     default:
       return NextResponse.json({error: "Invalid action" }, { status: 400 });

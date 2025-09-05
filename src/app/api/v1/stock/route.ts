@@ -12,26 +12,26 @@ export async function GET(req: Request) {
 
     // 👇 nuevo: filtro opcional por depósito
     const depositoId = Number(searchParams.get("depositoId") ?? "");
-    const whereDep = depositoId ? { deposito_id: depositoId } : {};
+    const whereDep = depositoId ? { id_deposito: depositoId } : {};
 
     const filas = await prisma.articDepos.findMany({
       where: {
         ...whereDep,
-        Articulo:  { codigo: { contains: codigo, mode: "insensitive" } } ,
+        articulo:  { codigo: { contains: codigo, mode: "insensitive" } } ,
       },
       include: {
-        Articulo: { include: { categoria: true, marca: true } },
-        Deposito: true,
+        articulo: { include: { categoria: true, marca: true } },
+        deposito: true,
       },
-      orderBy: { deposito_id: "asc" },
+      orderBy: { id_deposito: "asc" },
     });
 
     const data = filas.map((f) => ({
-      codigo: f.Articulo.codigo,
-      articulo: f.Articulo.nombre,
-      categoria: f.Articulo.categoria?.nombre ?? "-",
-      marca: f.Articulo.marca?.nombre ?? "-",
-      deposito: f.Deposito.direccion,
+      codigo: f.articulo.codigo,
+      articulo: f.articulo.nombre,
+      categoria: f.articulo.categoria?.nombre ?? "-",
+      marca: f.articulo.marca?.nombre ?? "-",
+      deposito: f.deposito.direccion,
       stock: f.stock,
       stock_min: f.stock_min,
       estado: f.stock >= f.stock_min ? "OK" : "REPONER",

@@ -1,16 +1,26 @@
 // app/components/MovimientoForm.tsx
 "use client";
 
+// <<<<<<< HEAD
 import { useEffect, useState } from "react";
+import { DepositoPostAction } from "../api/v1/deposito/route";
+import { TipoMovimiento } from "@/generated/prisma";
 
-type Tipo = "INGRESO" | "EGRESO" | "STOCK";
+const prefix_map = new Map([
+  [TipoMovimiento.INGRESO.toString(), "ING-"],
+  [TipoMovimiento.EGRESO.toString(), "EGR-"],
+  [TipoMovimiento.TRANSFERENCIA.toString(), "TRA-"],
+]);
+
 type Deposito = { id_deposito: number; direccion: string };
-type Articulo = { id_articulo: number; nombre: string };
+type Articulo = { codigo: string, id: number; nombre: string };
 
 export default function MovimientoForm({ onSuccess }: { onSuccess: () => void }) {
-  const [tipo, setTipo] = useState<Tipo>("INGRESO");
+  const [tipo, setTipo] = useState<TipoMovimiento>("INGRESO");
   const [fecha, setFecha] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [deposito, setDeposito] = useState<string>("");
+  const [depositoFuente, setDepositoFuente] = useState<string>("");
+  const [hideFuente, setHideFuente] = useState<boolean>(true);
   const [articulo, setArticulo] = useState<string>("");
   const [cantidad, setCantidad] = useState<string>("");
   const [comprobante, setComprobante] = useState<string>("");
@@ -20,6 +30,11 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const updateTipo = (new_tipo: TipoMovimiento) => {
+    setTipo(new_tipo);
+    setHideFuente(new_tipo != TipoMovimiento.TRANSFERENCIA);
+  }
 
   useEffect(() => {
     (async () => {
@@ -51,6 +66,13 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
     if (!cantidad) e.cantidad = "Requerida";
     else if (Number.isNaN(n) || !Number.isFinite(n)) e.cantidad = "Número inválido";
     else if (n <= 0) e.cantidad = "Debe ser > 0";
+    if (tipo == TipoMovimiento.TRANSFERENCIA) {
+      if (!depositoFuente) {
+        e.depositoFuente = "Selecciona un deposito fuente";
+      } else if (depositoFuente == deposito) {
+        e.depositoFuente = "Selecciona otro depósito";
+      }
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -58,20 +80,23 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
+    let comprobante_str = prefix_map.get(tipo)+parseInt(comprobante).toString();
+    let form_data = {
+      action: DepositoPostAction.new_movimiento,
+      tipo,
+      id_dst: Number(deposito),
+      id_src: tipo == TipoMovimiento.TRANSFERENCIA ? Number(depositoFuente) : null,
+      comprobante: comprobante_str,
+      articulos: [{id: Number(articulo), stock: Number(cantidad)}],
+    };
+    console.log(form_data);
 
     setSaving(true);
     try {
-      const res = await fetch("/api/v1/movimientos", {
+      const res = await fetch("/api/v1/deposito", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fecha,
-          tipo,
-          comprobante: comprobante || null,
-          id_deposito: Number(deposito),
-          id_articulo: Number(articulo),
-          cantidad: Number(cantidad),
-        }),
+        body: JSON.stringify(form_data),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -87,19 +112,6 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
 
   return (
     <form onSubmit={onSubmit} className="space-y-4 min-w-[24rem]">
-      {/* Fecha */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">Fecha</span>
-        </label>
-        <input
-          type="date"
-          className="input input-bordered w-full"
-          value={fecha}
-          onChange={(e) => setFecha(e.target.value)}
-        />
-        {errors.fecha && <span className="label-text-alt text-error">{errors.fecha}</span>}
-      </div>
 
       {/* Tipo */}
       <div className="form-control">
@@ -110,30 +122,31 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
             name="tipo"
             className="btn join-item"
             aria-label="Ingreso"
-            checked={tipo === "INGRESO"}
-            onChange={() => setTipo("INGRESO")}
+            checked={tipo === TipoMovimiento.INGRESO}
+            onChange={() => updateTipo(TipoMovimiento.INGRESO) }
           />
           <input
             type="radio"
             name="tipo"
             className="btn join-item"
             aria-label="Egreso"
-            checked={tipo === "EGRESO"}
-            onChange={() => setTipo("EGRESO")}
+            checked={tipo === TipoMovimiento.EGRESO} 
+            onChange={() => updateTipo(TipoMovimiento.EGRESO)}
           />
           <input
             type="radio"
             name="tipo"
             className="btn join-item"
             aria-label="Movimiento de stock"
-            checked={tipo === "STOCK"}
-            onChange={() => setTipo("STOCK")}
+            checked={tipo === TipoMovimiento.TRANSFERENCIA}
+            onChange={() => { updateTipo(TipoMovimiento.TRANSFERENCIA) }}
           />
         </div>
       </div>
 
-      {/* Depósito */}
+      {/* Depósitos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Depósito destino */}
         <div className="form-control">
           <label className="label">
             <span className="label-text font-medium">Depósito</span>
@@ -155,7 +168,30 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
           </select>
           {errors.deposito && <span className="label-text-alt text-error">{errors.deposito}</span>}
         </div>
+        {/* Depósito fuente */}
+        <div className="form-control" id="dep_dst" hidden={hideFuente}>
+          <label className="label">
+            <span className="label-text font-medium">Depósito fuente</span>
+          </label>
+          <select
+            className="select select-bordered w-full"
+            value={depositoFuente}
+            onChange={(e) => setDepositoFuente(e.target.value)}
+            disabled={loading || deps.length === 0}
+          >
+            <option value="" disabled>
+              {loading ? "Cargando..." : "Selecciona"}
+            </option>
+            {deps.map((d) => (
+              <option key={d.id_deposito} value={d.id_deposito}>
+                {d.direccion}
+              </option>
+            ))}
+          </select>
+          {errors.depositoFuente && <span className="label-text-alt text-error">{errors.depositoFuente}</span>}
+        </div>
 
+      </div>
         {/* Artículo */}
         <div className="form-control">
           <label className="label">
@@ -171,14 +207,14 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
               {loading ? "Cargando..." : "Selecciona"}
             </option>
             {arts.map((a) => (
-              <option key={a.id_articulo} value={a.id_articulo}>
+              <option key={a.id} value={a.id}>
                 {a.nombre}
               </option>
             ))}
           </select>
           {errors.articulo && <span className="label-text-alt text-error">{errors.articulo}</span>}
         </div>
-      </div>
+
 
       {/* Cantidad */}
       <div className="form-control">
