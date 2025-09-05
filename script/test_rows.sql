@@ -1,11 +1,14 @@
 BEGIN;
 
--- 1) Depósito base (idempotente, sin UNIQUE en direccion usamos NOT EXISTS)
-INSERT INTO "Deposito" ("direccion","cap_max")
-SELECT 'Depósito Principal', NULL
-WHERE NOT EXISTS (
-  SELECT 1 FROM "Deposito" WHERE "direccion" = 'Depósito Principal'
-);
+-- 1) Depósitos  (idempotente, sin UNIQUE en direccion usamos NOT EXISTS)
+INSERT INTO "Deposito" ("id", "direccion", "cap_max")
+VALUES
+  (1, 'Depósito Principal', 1000),
+  (2, 'Calle Falsa 123', 100),
+  (3, 'Calle Real 321', 200),
+  (4, 'Calle Tal Vez Real 789', 300),
+  (5, 'Calle Tal Vez Falsa 987', 200),
+  (6, 'Calle Cuántica 456654', 900);
 
 -- 2) Marcas
 INSERT INTO "MarcaArticulo" ("id", "nombre")
@@ -101,16 +104,26 @@ VALUES
   (30, 'yhn486', 'CPU Ryzen 7 2700X Legacy Champion Mamizou Edition', 10, 30)
 ON CONFLICT ("codigo") DO NOTHING;
 
--- 5) Stock para abc123 en Depósito Principal (idempotente)
-INSERT INTO "ArticDepos" ("id_deposito", "id_articulo", "stock", "stock_min")
-SELECT d.id, a.id, 12, 3
-FROM "Deposito" d
-JOIN "Articulo" a ON a.codigo = 'abc123'
-WHERE d."direccion" = 'Depósito Principal'
-  AND NOT EXISTS (
-    SELECT 1 FROM "ArticDepos" ad 
-    WHERE ad."id_deposito" = d.id AND ad."id_articulo" = a.id
-  );
+-- 5) Stock para rtx4153 en Depósito Principal
+INSERT INTO "ArticDepos" ("id", "id_deposito", "id_articulo", "stock", "stock_min")
+VALUES
+  (1, 1, 1, 20, 0);
+INSERT INTO "MovimientoStock" ("id", "fecha_hora", "tipo", "num_comprobante", "id_tipo_comprobante", "id_deposito")
+VALUES
+  (1, '2025-09-05 15:57:18.561', 'INGRESO', 'ING-1234', NULL, 1);
+INSERT INTO "DetalleMovimiento" ("id", "id_movimiento", "id_artic_depos", "cantidad")
+VALUES
+  (1, 1, 1, 20);
+
+-- INSERT INTO "ArticDepos" ("id_deposito", "id_articulo", "stock", "stock_min")
+-- SELECT d.id, a.id, 12, 3
+-- FROM "Deposito" d
+-- JOIN "Articulo" a ON a.codigo = 'rtx4153'
+-- WHERE d."direccion" = 'Depósito Principal'
+--   AND NOT EXISTS (
+--     SELECT 1 FROM "ArticDepos" ad 
+--     WHERE ad."id_deposito" = d.id AND ad."id_articulo" = a.id
+--   );
 
 COMMIT;
 
