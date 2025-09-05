@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -8,97 +5,85 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // url      = "postgresql://funny_user:funny_password@localhost:5435/millenium"
   url      = env("DATABASE_URL")
 }
 
 model CategoriaArticulo {
-  id      Int @id @default(autoincrement())
-  nombre  String @db.VarChar(60)
-
+  id        Int        @id @default(autoincrement())
+  nombre    String     @db.VarChar(60)
   articulos Articulo[]
 }
 
 model MarcaArticulo {
-  id      Int @id @default(autoincrement())
-  nombre  String @db.VarChar(60)
-
+  id        Int        @id @default(autoincrement())
+  nombre    String     @db.VarChar(60)
   articulos Articulo[]
 }
 
 model Articulo {
-  id            Int @id @default(autoincrement())
-  codigo        String @unique @db.VarChar(60)
-  nombre        String @db.VarChar(120)
-  id_categoria  Int?
-  id_marca      Int?
-  // u_medida      String? @db.VarChar(20) // FIXME: Add an enum for this?
-  
-  depositos     ArticDepos[]
-  categoria     CategoriaArticulo? @relation(fields: [id_categoria], references: [id])
-  marca         MarcaArticulo? @relation(fields: [id_marca], references: [id])
+  id           Int                @id @default(autoincrement())
+  codigo       String             @unique @db.VarChar(60)
+  nombre       String             @db.VarChar(120)
+  id_categoria Int?
+  id_marca     Int?
+  u_medida     String?            @db.VarChar(20)
+  ArticDepos   ArticDepos[]
+  categoria    CategoriaArticulo? @relation(fields: [id_categoria], references: [id])
+  marca        MarcaArticulo?     @relation(fields: [id_marca], references: [id])
 }
 
 model Deposito {
-  id          Int @id @default(autoincrement())
-  direccion   String
-  cap_max     Int?
-
-  articulos       ArticDepos[]
-  movimientos     MovimientoStock[]
-  // movimientos_ori MovimientoStock[] @relation("origen")
-  // movimientos_des MovimientoStock[] @relation("destino")
+  id                                                       Int               @id @default(autoincrement())
+  direccion                                                String
+  cap_max                                                  Int?
+  ArticDepos                                               ArticDepos[]
+  MovimientoStock_MovimientoStock_dep_destino_idToDeposito MovimientoStock[] @relation("MovimientoStock_dep_destino_idToDeposito")
+  MovimientoStock_MovimientoStock_dep_origen_idToDeposito  MovimientoStock[] @relation("MovimientoStock_dep_origen_idToDeposito")
 }
 
 model ArticDepos {
-  id            Int @id @default(autoincrement())
-  id_deposito   Int
-  id_articulo   Int
-  stock         Int @default(0)
-  stock_min     Int @default(0)
+  id           Int                 @id @default(autoincrement())
+  deposito_id  Int
+  articulo_id  Int
+  stock        Int                 @default(0)
+  stock_min    Int                 @default(0)
+  Articulo     Articulo            @relation(fields: [articulo_id], references: [id])
+  Deposito     Deposito            @relation(fields: [deposito_id], references: [id])
+  detalles_mov DetalleMovimiento[]
+}
 
-  detalles_mov  DetalleMovimiento[]
-  deposito      Deposito @relation(fields: [id_deposito], references: [id])
-  articulo      Articulo @relation(fields: [id_articulo], references: [id])
+model TipoComprobante {
+  id          Int               @id @default(autoincrement())
+  nombre      String            @db.VarChar(60)
+  observacion String?           @db.VarChar(200)
+  movimientos MovimientoStock[]
+}
+
+model MovimientoStock {
+  id                                                Int                 @id @default(autoincrement())
+  dep_origen_id                                     Int?
+  dep_destino_id                                    Int?
+  fecha_hora                                        DateTime
+  tipo                                              TipoMovimiento
+  num_comprobante                                   String?             @db.VarChar(40)
+  id_tipo_comprobante                               Int?
+  detalles_mov                                      DetalleMovimiento[]
+  Deposito_MovimientoStock_dep_destino_idToDeposito Deposito?           @relation("MovimientoStock_dep_destino_idToDeposito", fields: [dep_destino_id], references: [id])
+  Deposito_MovimientoStock_dep_origen_idToDeposito  Deposito?           @relation("MovimientoStock_dep_origen_idToDeposito", fields: [dep_origen_id], references: [id])
+  tipo_comprobante                                  TipoComprobante?    @relation(fields: [id_tipo_comprobante], references: [id])
+}
+
+model DetalleMovimiento {
+  id             Int             @id @default(autoincrement())
+  id_movimiento  Int
+  id_artic_depos Int
+  cantidad       Int
+  artic_depos    ArticDepos      @relation(fields: [id_artic_depos], references: [id])
+  movimiento     MovimientoStock @relation(fields: [id_movimiento], references: [id])
 }
 
 enum TipoMovimiento {
   INGRESO
   EGRESO
   TRANSFERENCIA
-}
-
-model TipoComprobante {
-  id            Int @id @default(autoincrement())
-  nombre        String @db.VarChar(60)
-  observacion   String? @db.VarChar(200)
-
-  movimientos   MovimientoStock[]
-}
-
-model MovimientoStock {
-  id                  Int @id @default(autoincrement())
-  id_deposito         Int
-  // dep_origen_id       Int?
-  // dep_destino_id      Int?
-  fecha_hora          DateTime
-  tipo                TipoMovimiento
-  num_comprobante     String? @unique @db.VarChar(40)
-  id_tipo_comprobante Int?
-
-  detalles_mov        DetalleMovimiento[]
-  deposito            Deposito @relation(fields: [id_deposito], references: [id])
-  // dep_origen          Deposito? @relation("origen", fields: [dep_origen_id], references: [id])
-  // dep_destino         Deposito? @relation("destino", fields: [dep_destino_id], references: [id])
-  tipo_comprobante    TipoComprobante? @relation(fields: [id_tipo_comprobante], references: [id])
-}
-
-model DetalleMovimiento {
-  id              Int @id @default(autoincrement())
-  id_movimiento   Int
-  id_artic_depos  Int
-  cantidad        Int
-
-  movimiento      MovimientoStock @relation(fields: [id_movimiento], references: [id])
-  artic_depos     ArticDepos @relation(fields: [id_artic_depos], references: [id])
 }
