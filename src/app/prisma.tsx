@@ -46,13 +46,18 @@ export async function registerArticulo(articulo: ArticuloData): Promise<DBId> {
   })
 }
 
-export async function retrieveArticulos(): Promise<Array<DBData<ArticuloData>>> {
-  return await prisma.articulo.findMany()
+export async function retrieveArticulos() {
+  return await prisma.articulo.findMany({
+    include: {
+      marca: true,
+      categoria: true,
+    }
+  })
   .then((entries) => {
     return entries.map((entry) => {
       let data = new ArticuloData(entry.codigo, entry.nombre,
                                   entry.id_categoria, entry.id_marca);
-      return {id: entry.id, data: data};
+      return {id: entry.id, data: data, marca: entry.marca, categoria: entry.categoria};
     });
   });
 }

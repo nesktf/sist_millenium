@@ -234,10 +234,10 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
         {errors.cantidad && <span className="label-text-alt text-error">{errors.cantidad}</span>}
       </div>
 
-      {/* Comprobante (opcional) */}
+      {/* Comprobante */}
       <div className="form-control">
         <label className="label">
-          <span className="label-text font-medium">Número de Comprobante (opcional)</span>
+          <span className="label-text font-medium">Número de Comprobante</span>
         </label>
         <input
           type="text"

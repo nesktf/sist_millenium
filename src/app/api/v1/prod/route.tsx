@@ -14,7 +14,13 @@ export async function GET(req: Request) {
     return NextResponse.json(
       prods.map((prod) => {
         let data: ArticuloData = prod.data;
-        return { codigo: data.getCodigo(), nombre: data.getNombre(), id: prod.id }
+        return {
+          codigo: data.getCodigo(),
+          nombre: data.getNombre(),
+          id: prod.id,
+          marca: prod.marca,
+          categoria: prod.categoria,
+        }
       })
     );
   })
