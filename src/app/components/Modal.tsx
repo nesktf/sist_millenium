@@ -9,34 +9,20 @@ export default function Modal({
   onClose: () => void;
 }) {
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* overlay */}
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      {/* caja modal */}
+      <div className="relative w-full max-w-xl p-6 rounded-xl shadow-2xl
+                      bg-base-100 text-base-content">
         {children}
-        <button onClick={onClose} style={{ marginTop: "1rem" }}>
-          Cerrar
-        </button>
+        <div className="mt-6 flex justify-end gap-2">
+          <button className="btn btn-ghost" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100vw",
-  height: "100vh",
-  backgroundColor: "rgba(0,0,0,0.5)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 1000,
-};
-
-const modalStyle: React.CSSProperties = {
-  background: "white",
-  padding: "2rem",
-  borderRadius: "8px",
-  width: "400px",
-  maxWidth: "90%",
-};

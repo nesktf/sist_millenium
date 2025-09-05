@@ -12,12 +12,12 @@ export async function GET(req: Request) {
 
     // 👇 nuevo: filtro opcional por depósito
     const depositoId = Number(searchParams.get("depositoId") ?? "");
-    const whereDep = depositoId ? { deposito_id: depositoId } : {};
+    const whereDep = depositoId ? { id_deposito: depositoId } : {};
 
     const filas = await prisma.articDepos.findMany({
       where: {
         ...whereDep,
-        articulo: { is: { codigo: { contains: codigo, mode: "insensitive" } } },
+        articulo:  { codigo: { contains: codigo, mode: "insensitive" } } ,
       },
       include: {
         articulo: { include: { categoria: true, marca: true } },

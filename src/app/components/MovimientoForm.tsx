@@ -1,7 +1,8 @@
 // app/components/MovimientoForm.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+// <<<<<<< HEAD
+import { useEffect, useState } from "react";
 import { DepositoPostAction } from "../api/v1/deposito/route";
 import { TipoMovimiento } from "@/generated/prisma";
 
@@ -11,195 +12,262 @@ const prefix_map = new Map([
   [TipoMovimiento.TRANSFERENCIA.toString(), "TRA-"],
 ]);
 
-export default function MovimientoForm({
-  onSuccess,
-  movimiento,
-}: {
-  onSuccess: () => void;
-  movimiento?: any;
-}) {
-  const [form, setForm] = useState({
-    id_articulo: "",
-    cantidad: "",
-    tipo: "INGRESO",
-    id_dst: "",
-    id_src: "",
-    comprobante: "",
-  });
-  const [error, setError] = useState("");
+type Deposito = { id_deposito: number; direccion: string };
+type Articulo = { codigo: string, id: number; nombre: string };
+
+export default function MovimientoForm({ onSuccess }: { onSuccess: () => void }) {
+  const [tipo, setTipo] = useState<TipoMovimiento>("INGRESO");
+  const [fecha, setFecha] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [deposito, setDeposito] = useState<string>("");
+  const [depositoFuente, setDepositoFuente] = useState<string>("");
+  const [hideFuente, setHideFuente] = useState<boolean>(true);
+  const [articulo, setArticulo] = useState<string>("");
+  const [cantidad, setCantidad] = useState<string>("");
+  const [comprobante, setComprobante] = useState<string>("");
+
+  const [deps, setDeps] = useState<Deposito[]>([]);
+  const [arts, setArts] = useState<Articulo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const updateTipo = (new_tipo: TipoMovimiento) => {
+    setTipo(new_tipo);
+    setHideFuente(new_tipo != TipoMovimiento.TRANSFERENCIA);
+  }
 
   useEffect(() => {
-    if (movimiento) {
-      setForm({
-        id_articulo: movimiento.id_articulo?.toString() || "",
-        cantidad: movimiento.cantidad?.toString() || "",
-        tipo: movimiento.tipo || "INGRESO",
-        id_dst: movimiento.id_dst.toString() || "",
-        id_src: movimiento.id_src.toString() || "",
-        comprobante: movimiento.comprobante || "",
-      });
-    }
-  }, [movimiento]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validaciones básicas
-    if (!form.id_articulo || !form.cantidad || !form.id_dst) {
-      setError("Los campos Artículo, Cantidad y Depósito son obligatorios");
-      return;
-    }
-    if (!form.comprobante) {
-      setError("Comprobante inválido");
-      return;
-    }
-    if (form.tipo == TipoMovimiento.TRANSFERENCIA && !form.id_src) {
-      setError("Depósito fuente es necesario en transferencia");
-      return;
-    }
-    if (parseInt(form.cantidad) <= 0) {
-      setError("La cantidad debe ser mayor a 0");
-      return;
-    }
-
-    let comprobante = prefix_map.get(form.tipo)+parseInt(form.comprobante).toString();
-    const api_data = {
-      action: DepositoPostAction.new_movimiento,
-      id_dst: Number(form.id_dst),
-      id_src: Number(form.id_src) || null,
-      tipo: form.tipo,
-      comprobante: comprobante,
-      articulos: [{id: Number(form.id_articulo), stock: Number(form.cantidad)}],
-    }
-
-    await fetch("/api/v1/deposito", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(api_data),
-    })
-    .then((res) => {
-      return res.json();
-    })
-    .then((json_res) => {
-      if (json_res.error) {
-        console.log(json_res.error);
-        setError(json_res.error);
-      } else {
-        setForm({
-          id_articulo: "",
-          cantidad: "",
-          tipo: "INGRESO",
-          id_dst: "",
-          id_src: "",
-          comprobante: "",
-        });
-        setError("");
-        onSuccess();
+    (async () => {
+      try {
+        const [rDep, rArt] = await Promise.all([
+          fetch("/api/v1/deposito", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: 0 }),
+          }),
+          fetch("/api/v1/prod"), // ajustá si tu endpoint de artículos es otro
+        ]);
+        const depData = await rDep.json();
+        const artData = await rArt.json();
+        setDeps(depData.depositos ?? []);
+        setArts(artData ?? []);
+      } finally {
+        setLoading(false);
       }
-    })
-    .catch((err) => {
-      console.log(err);
-      setError(error || "Error al guardar movimiento");
-    })
-  };
+    })();
+  }, []);
+
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!fecha) e.fecha = "Requerida";
+    if (!deposito) e.deposito = "Selecciona un depósito";
+    if (!articulo) e.articulo = "Selecciona un artículo";
+    const n = Number(cantidad);
+    if (!cantidad) e.cantidad = "Requerida";
+    else if (Number.isNaN(n) || !Number.isFinite(n)) e.cantidad = "Número inválido";
+    else if (n <= 0) e.cantidad = "Debe ser > 0";
+    if (tipo == TipoMovimiento.TRANSFERENCIA) {
+      if (!depositoFuente) {
+        e.depositoFuente = "Selecciona un deposito fuente";
+      } else if (depositoFuente == deposito) {
+        e.depositoFuente = "Selecciona otro depósito";
+      }
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!validate()) return;
+    let comprobante_str = prefix_map.get(tipo)+parseInt(comprobante).toString();
+    let form_data = {
+      action: DepositoPostAction.new_movimiento,
+      tipo,
+      id_dst: Number(deposito),
+      id_src: tipo == TipoMovimiento.TRANSFERENCIA ? Number(depositoFuente) : null,
+      comprobante: comprobante_str,
+      articulos: [{id: Number(articulo), stock: Number(cantidad)}],
+    };
+    console.log(form_data);
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/v1/deposito", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form_data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "No se pudo guardar");
+      }
+      onSuccess();
+    } catch (err: any) {
+      setErrors({ form: err.message || "Error inesperado" });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
-    >
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      
-      {/* Radio buttons para tipo de movimiento */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        <label style={{ fontWeight: "bold" }}>Tipo de Movimiento:</label>
-        <div style={{ display: "flex", gap: "1rem" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-            <input
-              type="radio"
-              name="tipo"
-              value={TipoMovimiento.INGRESO}
-              checked={form.tipo === "INGRESO"}
-              onChange={handleChange}
-            />
-            Ingreso
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-            <input
-              type="radio"
-              name="tipo"
-              value={TipoMovimiento.EGRESO}
-              checked={form.tipo === "EGRESO"}
-              onChange={handleChange}
-            />
-            Egreso
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-            <input
-              type="radio"
-              name="tipo"
-              value={TipoMovimiento.TRANSFERENCIA}
-              checked={form.tipo === "TRANSFERENCIA"}
-              onChange={handleChange}
-            />
-            Movimiento de stock
-          </label>
+    <form onSubmit={onSubmit} className="space-y-4 min-w-[24rem]">
+
+      {/* Tipo */}
+      <div className="form-control">
+        <span className="label-text font-medium mb-2">Tipo de Movimiento</span>
+        <div className="join">
+          <input
+            type="radio"
+            name="tipo"
+            className="btn join-item"
+            aria-label="Ingreso"
+            checked={tipo === TipoMovimiento.INGRESO}
+            onChange={() => updateTipo(TipoMovimiento.INGRESO) }
+          />
+          <input
+            type="radio"
+            name="tipo"
+            className="btn join-item"
+            aria-label="Egreso"
+            checked={tipo === TipoMovimiento.EGRESO} 
+            onChange={() => updateTipo(TipoMovimiento.EGRESO)}
+          />
+          <input
+            type="radio"
+            name="tipo"
+            className="btn join-item"
+            aria-label="Movimiento de stock"
+            checked={tipo === TipoMovimiento.TRANSFERENCIA}
+            onChange={() => { updateTipo(TipoMovimiento.TRANSFERENCIA) }}
+          />
         </div>
       </div>
 
-      <input
-        name="id_dst"
-        value={form.id_dst}
-        onChange={handleChange}
-        placeholder="Depósito (ID)"
-        type="number"
-        required
-      />
+      {/* Depósitos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Depósito destino */}
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text font-medium">Depósito</span>
+          </label>
+          <select
+            className="select select-bordered w-full"
+            value={deposito}
+            onChange={(e) => setDeposito(e.target.value)}
+            disabled={loading || deps.length === 0}
+          >
+            <option value="" disabled>
+              {loading ? "Cargando..." : "Selecciona"}
+            </option>
+            {deps.map((d) => (
+              <option key={d.id_deposito} value={d.id_deposito}>
+                {d.direccion}
+              </option>
+            ))}
+          </select>
+          {errors.deposito && <span className="label-text-alt text-error">{errors.deposito}</span>}
+        </div>
+        {/* Depósito fuente */}
+        <div className="form-control" id="dep_dst" hidden={hideFuente}>
+          <label className="label">
+            <span className="label-text font-medium">Depósito fuente</span>
+          </label>
+          <select
+            className="select select-bordered w-full"
+            value={depositoFuente}
+            onChange={(e) => setDepositoFuente(e.target.value)}
+            disabled={loading || deps.length === 0}
+          >
+            <option value="" disabled>
+              {loading ? "Cargando..." : "Selecciona"}
+            </option>
+            {deps.map((d) => (
+              <option key={d.id_deposito} value={d.id_deposito}>
+                {d.direccion}
+              </option>
+            ))}
+          </select>
+          {errors.depositoFuente && <span className="label-text-alt text-error">{errors.depositoFuente}</span>}
+        </div>
 
-      <input
-        name="id_src"
-        value={form.id_src}
-        onChange={handleChange}
-        placeholder="Deposito fuente (ID)"
-        type="number"
-      />
-      
-      <input
-        name="id_articulo"
-        value={form.id_articulo}
-        onChange={handleChange}
-        placeholder="Artículo (ID)"
-        type="number"
-        required
-      />
-      
-      <input
-        name="cantidad"
-        value={form.cantidad}
-        onChange={handleChange}
-        placeholder="Cantidad"
-        type="number"
-        min="1"
-        required
-      />
-      
-      <input
-        name="comprobante"
-        value={form.comprobante}
-        onChange={handleChange}
-        placeholder="Número de Comprobante"
-        type="number"
-        min="1"
-        required
-      />
-      
-      <button type="submit">
-        {movimiento ? "Guardar cambios" : "Aceptar"}
-      </button>
+      </div>
+        {/* Artículo */}
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text font-medium">Artículo</span>
+          </label>
+          <select
+            className="select select-bordered w-full"
+            value={articulo}
+            onChange={(e) => setArticulo(e.target.value)}
+            disabled={loading || arts.length === 0}
+          >
+            <option value="" disabled>
+              {loading ? "Cargando..." : "Selecciona"}
+            </option>
+            {arts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nombre}
+              </option>
+            ))}
+          </select>
+          {errors.articulo && <span className="label-text-alt text-error">{errors.articulo}</span>}
+        </div>
+
+
+      {/* Cantidad */}
+      <div className="form-control">
+        <label className="label">
+          <span className="label-text font-medium">Cantidad</span>
+        </label>
+        <input
+          type="number"
+          className="input input-bordered w-full"
+          inputMode="decimal"
+          step="any"
+          min={0}
+          value={cantidad}
+          onChange={(e) => setCantidad(e.target.value)}
+          placeholder="Ej: 5"
+        />
+        {errors.cantidad && <span className="label-text-alt text-error">{errors.cantidad}</span>}
+      </div>
+
+      {/* Comprobante */}
+      <div className="form-control">
+        <label className="label">
+          <span className="label-text font-medium">Número de Comprobante</span>
+        </label>
+        <input
+          type="text"
+          className="input input-bordered w-full"
+          value={comprobante}
+          onChange={(e) => setComprobante(e.target.value)}
+          placeholder="Ej: FA-0001-001234"
+        />
+      </div>
+
+      {/* Errores de formulario */}
+      {errors.form && <div className="alert alert-error py-2">{errors.form}</div>}
+
+      {/* Acciones */}
+      <div className="mt-2 flex items-center justify-between">
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => {
+            // Si tu Modal cierra al hacer onClose en el padre, este botón puede disparar un evento personalizado
+            // o podés pasar un onCancel por props. Por ahora, que no haga submit.
+            (document.activeElement as HTMLElement)?.blur();
+          }}
+        >
+          Cancelar
+        </button>
+        <button type="submit" disabled={saving} className="btn btn-primary">
+          {saving ? <span className="loading loading-spinner loading-sm" /> : "Aceptar"}
+        </button>
+      </div>
     </form>
   );
 }

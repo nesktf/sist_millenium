@@ -41,25 +41,42 @@ export default function ConsultarStockPage() {
       {loading && <p>Cargando…</p>}
       {err && <p style={{ color: "red" }}>{err}</p>}
 
-      {filas.length > 0 && (
-        <table border={1} cellPadding={6} style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr>
-              <th>Código</th><th>Artículo</th><th>Categoría</th><th>Marca</th>
-              <th>Depósito</th><th>Stock</th><th>Stock min</th><th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((f, i) => (
-              <tr key={`${f.codigo}-${i}`}>
-                <td>{f.codigo}</td><td>{f.articulo}</td><td>{f.categoria}</td><td>{f.marca}</td>
-                <td>{f.deposito}</td><td>{f.stock}</td><td>{f.stock_min}</td>
-                <td style={{ color: f.estado === "OK" ? "green" : "red" }}>{f.estado}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+{filas.length > 0 && (
+<table className="table w-full border border-white">
+  <thead className="border-b border-white">
+    <tr>
+      <th>Código</th>
+      <th>Artículo</th>
+      <th>Categoría</th>
+      <th>Marca</th>
+      <th>Depósito</th>
+      <th>Stock</th>
+      <th>Stock min</th>
+      <th>Estado</th>
+    </tr>
+  </thead>
+  <tbody>
+    {filas.map((f, i) => (
+      <tr key={`${f.codigo}-${i}`} className="border-b border-white">
+        <td>{f.codigo}</td>
+        <td>{f.articulo}</td>
+        <td>{f.categoria}</td>
+        <td>{f.marca}</td>
+        <td>{f.deposito}</td>
+        <td>{f.stock}</td>
+        <td>{f.stock_min}</td>
+        <td className={f.estado === "OK" ? "text-green-500" : "text-red-500"}>
+          {f.estado}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+)}
+
+
+      
       {!loading && !err && codigo.trim() && filas.length === 0 && (
       <p style={{ marginTop: 8 }}>
       No se encontraron resultados para <b>{codigo}</b>.

@@ -92,25 +92,26 @@ export default function HomePage() {
       >
         Productos
       </h1>
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+      <div className="mb-4 flex flex-wrap gap-3">
         <button
           onClick={() => {
             setEditingProduct(null);
             setShowForm(true);
           }}
+          className="btn btn-primary"
         >
           Agregar producto
         </button>
-      {/* Boton Ver Movimientos */}
-        <Link href="/movimientos">
-          <button>
-            Ver Movimientos
-          </button>
+
+        <Link href="/movimientos" className="btn btn-secondary">
+         Ver Movimientos
         </Link>
-        <Link href="/stock">
-          <button>Consultar stock</button>
+
+        <Link href="/stock" className="btn btn-accent">
+          Consultar stock
         </Link>
       </div>
+
 
       {/* 🔎 Filtros */}
       <div style={{ marginBottom: "1rem", display: "flex", gap: "0.5rem" }}>
