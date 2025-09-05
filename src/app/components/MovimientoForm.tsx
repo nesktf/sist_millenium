@@ -2,6 +2,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { DepositoPostAction } from "../api/v1/deposito/route";
+import { TipoMovimiento } from "@/generated/prisma";
+
+const prefix_map = new Map([
+  [TipoMovimiento.INGRESO.toString(), "ING-"],
+  [TipoMovimiento.EGRESO.toString(), "EGR-"],
+  [TipoMovimiento.TRANSFERENCIA.toString(), "TRA-"],
+]);
 
 export default function MovimientoForm({
   onSuccess,
@@ -11,24 +19,24 @@ export default function MovimientoForm({
   movimiento?: any;
 }) {
   const [form, setForm] = useState({
-    fecha: new Date().toISOString().split('T')[0], // fecha actual por defecto
     id_articulo: "",
     cantidad: "",
     tipo: "INGRESO",
-    id_deposito: "",
-    num_comprobante: "",
+    id_dst: "",
+    id_src: "",
+    comprobante: "",
   });
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (movimiento) {
       setForm({
-        fecha: movimiento.fecha?.split('T')[0] || new Date().toISOString().split('T')[0],
         id_articulo: movimiento.id_articulo?.toString() || "",
         cantidad: movimiento.cantidad?.toString() || "",
         tipo: movimiento.tipo || "INGRESO",
-        id_deposito: movimiento.id_deposito?.toString() || "",
-        num_comprobante: movimiento.num_comprobante || "",
+        id_dst: movimiento.id_dst.toString() || "",
+        id_src: movimiento.id_src.toString() || "",
+        comprobante: movimiento.comprobante || "",
       });
     }
   }, [movimiento]);
@@ -41,48 +49,62 @@ export default function MovimientoForm({
     e.preventDefault();
 
     // Validaciones básicas
-    if (!form.id_articulo || !form.cantidad || !form.id_deposito) {
+    if (!form.id_articulo || !form.cantidad || !form.id_dst) {
       setError("Los campos Artículo, Cantidad y Depósito son obligatorios");
       return;
     }
-
+    if (!form.comprobante) {
+      setError("Comprobante inválido");
+      return;
+    }
+    if (form.tipo == TipoMovimiento.TRANSFERENCIA && !form.id_src) {
+      setError("Depósito fuente es necesario en transferencia");
+      return;
+    }
     if (parseInt(form.cantidad) <= 0) {
       setError("La cantidad debe ser mayor a 0");
       return;
     }
 
-    const body = {
-      fecha_hora: new Date(form.fecha + 'T00:00:00').toISOString(),
+    let comprobante = prefix_map.get(form.tipo)+parseInt(form.comprobante).toString();
+    const api_data = {
+      action: DepositoPostAction.new_movimiento,
+      id_dst: Number(form.id_dst),
+      id_src: Number(form.id_src) || null,
       tipo: form.tipo,
-      id_deposito: Number(form.id_deposito),
-      num_comprobante: form.num_comprobante.trim() || null,
-      detalles: [{
-        id_articulo: Number(form.id_articulo),
-        cantidad: Number(form.cantidad)
-      }]
-    };
-
-    const res = await fetch("/api/v1/movimientos", {
-      method: movimiento ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(movimiento ? { id: movimiento.id, ...body } : body),
-    });
-
-    if (res.ok) {
-      setForm({
-        fecha: new Date().toISOString().split('T')[0],
-        id_articulo: "",
-        cantidad: "",
-        tipo: "INGRESO",
-        id_deposito: "",
-        num_comprobante: "",
-      });
-      setError("");
-      onSuccess();
-    } else {
-      const err = await res.json();
-      setError(err.error || "Error al guardar movimiento");
+      comprobante: comprobante,
+      articulos: [{id: Number(form.id_articulo), stock: Number(form.cantidad)}],
     }
+
+    await fetch("/api/v1/deposito", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(api_data),
+    })
+    .then((res) => {
+      return res.json();
+    })
+    .then((json_res) => {
+      if (json_res.error) {
+        console.log(json_res.error);
+        setError(json_res.error);
+      } else {
+        setForm({
+          id_articulo: "",
+          cantidad: "",
+          tipo: "INGRESO",
+          id_dst: "",
+          id_src: "",
+          comprobante: "",
+        });
+        setError("");
+        onSuccess();
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      setError(error || "Error al guardar movimiento");
+    })
   };
 
   return (
@@ -92,15 +114,6 @@ export default function MovimientoForm({
     >
       {error && <p style={{ color: "red" }}>{error}</p>}
       
-      <input
-        name="fecha"
-        type="date"
-        value={form.fecha}
-        onChange={handleChange}
-        required
-        style={{ padding: "0.5rem" }}
-      />
-      
       {/* Radio buttons para tipo de movimiento */}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
         <label style={{ fontWeight: "bold" }}>Tipo de Movimiento:</label>
@@ -109,7 +122,7 @@ export default function MovimientoForm({
             <input
               type="radio"
               name="tipo"
-              value="INGRESO"
+              value={TipoMovimiento.INGRESO}
               checked={form.tipo === "INGRESO"}
               onChange={handleChange}
             />
@@ -119,7 +132,7 @@ export default function MovimientoForm({
             <input
               type="radio"
               name="tipo"
-              value="EGRESO"
+              value={TipoMovimiento.EGRESO}
               checked={form.tipo === "EGRESO"}
               onChange={handleChange}
             />
@@ -129,7 +142,7 @@ export default function MovimientoForm({
             <input
               type="radio"
               name="tipo"
-              value="TRANSFERENCIA"
+              value={TipoMovimiento.TRANSFERENCIA}
               checked={form.tipo === "TRANSFERENCIA"}
               onChange={handleChange}
             />
@@ -139,12 +152,20 @@ export default function MovimientoForm({
       </div>
 
       <input
-        name="id_deposito"
-        value={form.id_deposito}
+        name="id_dst"
+        value={form.id_dst}
         onChange={handleChange}
         placeholder="Depósito (ID)"
         type="number"
         required
+      />
+
+      <input
+        name="id_src"
+        value={form.id_src}
+        onChange={handleChange}
+        placeholder="Deposito fuente (ID)"
+        type="number"
       />
       
       <input
@@ -167,10 +188,13 @@ export default function MovimientoForm({
       />
       
       <input
-        name="num_comprobante"
-        value={form.num_comprobante}
+        name="comprobante"
+        value={form.comprobante}
         onChange={handleChange}
-        placeholder="Número de Comprobante (opcional)"
+        placeholder="Número de Comprobante"
+        type="number"
+        min="1"
+        required
       />
       
       <button type="submit">
