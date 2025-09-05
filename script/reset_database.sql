@@ -1,0 +1,9 @@
+BEGIN;
+
+TRUNCATE "Articulo" CASCADE;
+TRUNCATE "CategoriaArticulo" CASCADE;
+TRUNCATE "MarcaArticulo" CASCADE;
+TRUNCATE "Deposito" CASCADE;
+TRUNCATE "ArticDepos" CASCADE;
+
+COMMIT;
