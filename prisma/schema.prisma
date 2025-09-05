@@ -8,8 +8,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // url      = "postgresql://funny_user:funny_password@localhost:5435/millenium"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://funny_user:funny_password@localhost:5435/millenium"
 }
 
 model CategoriaArticulo {
