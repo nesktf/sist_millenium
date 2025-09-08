@@ -1,7 +1,6 @@
 // app/components/MovimientoForm.tsx
 "use client";
 
-// <<<<<<< HEAD
 import { useEffect, useState } from "react";
 import { DepositoPostAction } from "../api/v1/deposito/route";
 import { TipoMovimiento } from "@/generated/prisma";
@@ -14,6 +13,7 @@ const prefix_map = new Map([
 
 type Deposito = { id_deposito: number; direccion: string };
 type Articulo = { codigo: string, id: number; nombre: string };
+type ArticuloSeleccionado = { id: number; nombre: string; cantidad: number };
 
 export default function MovimientoForm({ onSuccess }: { onSuccess: () => void }) {
   const [tipo, setTipo] = useState<TipoMovimiento>("INGRESO");
@@ -21,9 +21,12 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
   const [deposito, setDeposito] = useState<string>("");
   const [depositoFuente, setDepositoFuente] = useState<string>("");
   const [hideFuente, setHideFuente] = useState<boolean>(true);
-  const [articulo, setArticulo] = useState<string>("");
-  const [cantidad, setCantidad] = useState<string>("");
   const [comprobante, setComprobante] = useState<string>("");
+
+  // Estados para manejo de múltiples artículos
+  const [articuloSeleccionado, setArticuloSeleccionado] = useState<string>("");
+  const [cantidadSeleccionada, setCantidadSeleccionada] = useState<string>("");
+  const [articulosAgregados, setArticulosAgregados] = useState<ArticuloSeleccionado[]>([]);
 
   const [deps, setDeps] = useState<Deposito[]>([]);
   const [arts, setArts] = useState<Articulo[]>([]);
@@ -57,15 +60,57 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
     })();
   }, []);
 
+  function agregarArticulo() {
+    const erroresTemp: Record<string, string> = {};
+    
+    if (!articuloSeleccionado) {
+      erroresTemp.articulo = "Selecciona un artículo";
+    }
+    
+    const cantidad = Number(cantidadSeleccionada);
+    if (!cantidadSeleccionada) {
+      erroresTemp.cantidad = "Ingresa la cantidad";
+    } else if (Number.isNaN(cantidad) || !Number.isFinite(cantidad)) {
+      erroresTemp.cantidad = "Número inválido";
+    } else if (cantidad <= 0) {
+      erroresTemp.cantidad = "Debe ser > 0";
+    }
+
+    // Verificar si el artículo ya fue agregado
+    const yaExiste = articulosAgregados.some(art => art.id === Number(articuloSeleccionado));
+    if (yaExiste) {
+      erroresTemp.articulo = "Este artículo ya fue agregado";
+    }
+
+    setErrors(erroresTemp);
+
+    if (Object.keys(erroresTemp).length === 0) {
+      const articulo = arts.find(a => a.id === Number(articuloSeleccionado));
+      if (articulo) {
+        setArticulosAgregados(prev => [...prev, {
+          id: articulo.id,
+          nombre: articulo.nombre,
+          cantidad: cantidad
+        }]);
+        
+        // Limpiar campos
+        setArticuloSeleccionado("");
+        setCantidadSeleccionada("");
+        setErrors({});
+      }
+    }
+  }
+
+  function eliminarArticulo(id: number) {
+    setArticulosAgregados(prev => prev.filter(art => art.id !== id));
+  }
+
   function validate() {
     const e: Record<string, string> = {};
     if (!fecha) e.fecha = "Requerida";
     if (!deposito) e.deposito = "Selecciona un depósito";
-    if (!articulo) e.articulo = "Selecciona un artículo";
-    const n = Number(cantidad);
-    if (!cantidad) e.cantidad = "Requerida";
-    else if (Number.isNaN(n) || !Number.isFinite(n)) e.cantidad = "Número inválido";
-    else if (n <= 0) e.cantidad = "Debe ser > 0";
+    if (articulosAgregados.length === 0) e.articulos = "Agrega al menos un artículo";
+    
     if (tipo == TipoMovimiento.TRANSFERENCIA) {
       if (!depositoFuente) {
         e.depositoFuente = "Selecciona un deposito fuente";
@@ -80,14 +125,18 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-    let comprobante_str = prefix_map.get(tipo)+parseInt(comprobante).toString();
+    
+    let comprobante_str = prefix_map.get(tipo) + parseInt(comprobante).toString();
     let form_data = {
       action: DepositoPostAction.new_movimiento,
       tipo,
       id_dst: Number(deposito),
       id_src: tipo == TipoMovimiento.TRANSFERENCIA ? Number(depositoFuente) : null,
       comprobante: comprobante_str,
-      articulos: [{id: Number(articulo), stock: Number(cantidad)}],
+      articulos: articulosAgregados.map(art => ({
+        id: art.id,
+        stock: art.cantidad
+      })),
     };
     console.log(form_data);
 
@@ -111,7 +160,7 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 min-w-[24rem]">
+    <form onSubmit={onSubmit} className="space-y-4 min-w-[32rem]">
 
       {/* Tipo */}
       <div className="form-control">
@@ -168,6 +217,7 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
           </select>
           {errors.deposito && <span className="label-text-alt text-error">{errors.deposito}</span>}
         </div>
+        
         {/* Depósito fuente */}
         <div className="form-control" id="dep_dst" hidden={hideFuente}>
           <label className="label">
@@ -190,48 +240,92 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
           </select>
           {errors.depositoFuente && <span className="label-text-alt text-error">{errors.depositoFuente}</span>}
         </div>
-
       </div>
-        {/* Artículo */}
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Artículo</span>
-          </label>
-          <select
-            className="select select-bordered w-full"
-            value={articulo}
-            onChange={(e) => setArticulo(e.target.value)}
-            disabled={loading || arts.length === 0}
-          >
-            <option value="" disabled>
-              {loading ? "Cargando..." : "Selecciona"}
-            </option>
-            {arts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nombre}
+
+      {/* Sección para agregar artículos */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-4">
+        <h3 className="text-lg font-medium">Agregar Artículos</h3>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          {/* Artículo */}
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium">Artículo</span>
+            </label>
+            <select
+              className="select select-bordered w-full"
+              value={articuloSeleccionado}
+              onChange={(e) => setArticuloSeleccionado(e.target.value)}
+              disabled={loading || arts.length === 0}
+            >
+              <option value="" disabled>
+                {loading ? "Cargando..." : "Selecciona"}
               </option>
-            ))}
-          </select>
-          {errors.articulo && <span className="label-text-alt text-error">{errors.articulo}</span>}
+              {arts.filter(a => !articulosAgregados.some(art => art.id === a.id)).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nombre}
+                </option>
+              ))}
+            </select>
+            {errors.articulo && <span className="label-text-alt text-error">{errors.articulo}</span>}
+          </div>
+
+          {/* Cantidad */}
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium">Cantidad</span>
+            </label>
+            <input
+              type="number"
+              className="input input-bordered w-full"
+              inputMode="decimal"
+              step="any"
+              min={0}
+              value={cantidadSeleccionada}
+              onChange={(e) => setCantidadSeleccionada(e.target.value)}
+              placeholder="Ej: 5"
+            />
+            {errors.cantidad && <span className="label-text-alt text-error">{errors.cantidad}</span>}
+          </div>
+
+          {/* Botón agregar */}
+          <div className="form-control">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={agregarArticulo}
+              disabled={!articuloSeleccionado || !cantidadSeleccionada}
+            >
+              Agregar
+            </button>
+          </div>
         </div>
 
-
-      {/* Cantidad */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">Cantidad</span>
-        </label>
-        <input
-          type="number"
-          className="input input-bordered w-full"
-          inputMode="decimal"
-          step="any"
-          min={0}
-          value={cantidad}
-          onChange={(e) => setCantidad(e.target.value)}
-          placeholder="Ej: 5"
-        />
-        {errors.cantidad && <span className="label-text-alt text-error">{errors.cantidad}</span>}
+        {/* Lista de artículos agregados */}
+        {articulosAgregados.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="font-medium">Artículos agregados:</h4>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {articulosAgregados.map((art) => (
+                <div key={art.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                  <div className="flex-1">
+                    <span className="font-medium text-gray-900">{art.nombre}</span>
+                    <span className="text-gray-700 ml-2">- Cantidad: {art.cantidad}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-error btn-sm"
+                    onClick={() => eliminarArticulo(art.id)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {errors.articulos && <span className="label-text-alt text-error">{errors.articulos}</span>}
       </div>
 
       {/* Comprobante */}
@@ -257,8 +351,6 @@ export default function MovimientoForm({ onSuccess }: { onSuccess: () => void })
           type="button"
           className="btn btn-ghost"
           onClick={() => {
-            // Si tu Modal cierra al hacer onClose en el padre, este botón puede disparar un evento personalizado
-            // o podés pasar un onCancel por props. Por ahora, que no haga submit.
             (document.activeElement as HTMLElement)?.blur();
           }}
         >
