@@ -10,6 +10,29 @@ import {
 } from "@/app/prisma";
 import { TipoMovimiento } from "@/generated/prisma";
 
+
+//nuevo handler para GET (en consultar stock para q filtro me devuelva los depositos)
+export async function GET(req: Request) {
+  return await retrieveDepositos()
+    .then((depos) => {
+      return NextResponse.json(
+        depos.map((depo) => {
+          let data: DepositoData = depo.data;
+          return {
+            id: depo.id,
+            direccion: data.getDireccion(),
+            capacidad: data.getCap(),
+          };
+        })
+      );
+    })
+    .catch((err) => {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    });
+}
+
+
+
 export enum DepositoPostAction {
   get_depositos = 0,
   get_movimientos = 1,

@@ -1,18 +1,28 @@
 // app/movimientos/page.tsx
 "use client";
 
+
+
 import { useState, useEffect } from "react";
 import MovimientosTable from "../components/MovimientosTable";
 import MovimientoForm from "../components/MovimientoForm";
 import Modal from "../components/Modal";
 import Link from "next/link";
 
+type ArticuloOpt = { id_articulo: number; nombre: string };
+
 export default function MovimientosPage() {
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [depositos, setDepositos] = useState<any[]>([]);
   const [selectedDeposito, setSelectedDeposito] = useState("all");
+  const [articulos, setArticulos] = useState<{ id: number; nombre: string }[]>([]);
+  const [selectedArticulo, setSelectedArticulo] = useState<string>(""); // string porque el select devuelve string
+
+  const [selectedFecha, setSelectedFecha] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+
+
 
   useEffect(() => {
     async function fetchDepositos() {
@@ -29,10 +39,34 @@ export default function MovimientosPage() {
     fetchDepositos();
   }, []);
 
+// Cargar artículos
+  useEffect(() => {
+    async function fetchArticulos() {
+      try {
+        const res = await fetch("/api/v1/prod", { method: "GET" });
+        if (!res.ok) throw new Error(await res.text());
+
+        const data: { id: number; nombre: string }[] = await res.json();
+        setArticulos(data);
+
+        // seleccionar el primero por defecto (opcional)
+        if (data.length && !selectedArticulo) {
+          setSelectedArticulo(String(data[0].id));
+        }
+      } catch (e) {
+        console.error("Error cargando artículos:", e);
+        setArticulos([]);
+      }
+    }
+    fetchArticulos();
+  }, []);
+
+
+
   useEffect(() => {
     fetchMovimientos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDeposito]);
+  }, [selectedDeposito, selectedArticulo, selectedFecha]);
 
   async function fetchMovimientos() {
     if (!selectedDeposito) {
@@ -53,6 +87,8 @@ export default function MovimientosPage() {
         body: JSON.stringify({
           action: 1,
           id_deposito: parseInt(selectedDeposito),
+          articuloId: selectedArticulo ? parseInt(selectedArticulo) : undefined,
+          fecha: selectedFecha || undefined,
         }),
       });
     }
@@ -95,7 +131,9 @@ export default function MovimientosPage() {
         </div>
 
         {/* Selector de depósito */}
-        <div className="flex items-center gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 items-end">
+
+        <div className="flex items-center gap-2 md:col-span-4">
           <label htmlFor="deposito-select" className="font-medium">
             Selecciona un Depósito:
           </label>
@@ -113,7 +151,43 @@ export default function MovimientosPage() {
             ))}
           </select>
         </div>
+        {/* Selector de producto */}
+
+        <div className="flex items-center gap-2 md:col-span-5">
+          <label htmlFor="articulo-select" className="font-medium">
+            Selecciona un Producto:
+          </label>
+          <select
+            id="articulo-select"
+            className="select select-bordered select-sm w-72"
+            value={selectedArticulo}
+            onChange={(e) => setSelectedArticulo(e.target.value)}
+          >
+            <option value="all">Todos los Artículos</option>
+          
+            {articulos.map((p: any) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+        {/* Selector de fecha */}
+        <div className="flex items-center gap-2 md:col-span-3">
+          <label htmlFor="fecha" className="font-medium">
+            Fecha:
+          </label>
+          <input
+            id="fecha"
+            type="date"
+            className="input input-bordered input-sm"
+            value={selectedFecha}
+            onChange={(e) => setSelectedFecha(e.target.value)}
+          />
+        </div>
+
       </div>
+  </div>
 
       {/* Tabla de movimientos */}
       <MovimientosTable movimientos={movimientos} isLoading={isLoading} />
