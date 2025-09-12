@@ -70,6 +70,9 @@ export default function MovimientosPage() {
         }))
       );
       setMovimientos(flattenedMovs);
+    } else {
+      setIsLoading(false);
+      setMovimientos([]);
     }
 
     setIsLoading(false);
