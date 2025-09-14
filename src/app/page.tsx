@@ -104,14 +104,13 @@ export default function HomePage() {
         </button>
 
         <Link href="/movimientos" className="btn btn-secondary">
-         Ver Movimientos
+          Ver Movimientos
         </Link>
 
         <Link href="/stock" className="btn btn-accent">
           Consultar stock
         </Link>
       </div>
-
 
       {/* 🔎 Filtros */}
       <div style={{ marginBottom: "1rem", display: "flex", gap: "0.5rem" }}>
