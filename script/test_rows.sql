@@ -135,7 +135,8 @@ ALTER SEQUENCE "DetalleMovimiento_id_seq" RESTART WITH 3;
 
 COMMIT;
 
--- 6) Chequeo SELECT ad.id, a.codigo, d.direccion, ad.stock, ad.stock_min
+-- 6) Chequeo
+SELECT ad.id, a.codigo, d.direccion, ad.stock, ad.stock_min
 FROM "ArticDepos" ad
 JOIN "Articulo" a ON a.id = ad.id_articulo
 JOIN "Deposito" d ON d.id = ad.id_deposito
