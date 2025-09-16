@@ -8,6 +8,7 @@ import MovimientosTable from "../components/MovimientosTable";
 import MovimientoForm from "../components/MovimientoForm";
 import Modal from "../components/Modal";
 import Link from "next/link";
+import { DepositoPostAction } from "../api/v1/deposito/route";
 
 type ArticuloOpt = { id_articulo: number; nombre: string };
 
@@ -76,6 +77,9 @@ export default function MovimientosPage() {
     }
 
     setIsLoading(true);
+    console.log(selectedDeposito);
+    console.log(selectedArticulo);
+    console.log(selectedFecha);
 
     let res: Response;
     if (selectedDeposito === "all") {
@@ -85,9 +89,9 @@ export default function MovimientosPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 1,
+          action: DepositoPostAction.get_movimientos,
           id_deposito: parseInt(selectedDeposito),
-          articuloId: selectedArticulo ? parseInt(selectedArticulo) : undefined,
+          id_articulo: selectedArticulo ? parseInt(selectedArticulo) : undefined,
           fecha: selectedFecha || undefined,
         }),
       });
@@ -102,10 +106,18 @@ export default function MovimientosPage() {
           tipo: mov.tipo,
           comprobante: mov.comprobante,
           articulo: art.nombre || art.articulo,
+          articulo_id: art.id,
           cantidad: art.cantidad,
         }))
       );
-      setMovimientos(flattenedMovs);
+        console.log(flattenedMovs);
+      if (selectedArticulo) {
+        setMovimientos(flattenedMovs);
+      } else {
+        setMovimientos(flattenedMovs.filter((mov: any) => {
+          return mov.articulo_id == Number(selectedArticulo);
+        }))
+      }
     } else {
       setIsLoading(false);
       setMovimientos([]);
