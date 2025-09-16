@@ -34,6 +34,8 @@ model Articulo {
   // u_medida      String? @db.VarChar(20) // FIXME: Add an enum for this?
   
   depositos     ArticDepos[]
+  detalles_orden DetalleOrdenCompra[]
+  detalles_comprobante DetalleComprobanteProveedor[]
   categoria     CategoriaArticulo? @relation(fields: [id_categoria], references: [id])
   marca         MarcaArticulo? @relation(fields: [id_marca], references: [id])
 }
@@ -100,4 +102,93 @@ model DetalleMovimiento {
 
   movimiento      MovimientoStock @relation(fields: [id_movimiento], references: [id])
   artic_depos     ArticDepos @relation(fields: [id_artic_depos], references: [id])
+}
+
+enum EstadoProveedor {
+  ACTIVO
+  INACTIVO
+}
+
+model Proveedor {
+  id Int @id @default(autoincrement())
+  nombre String
+  cuit String
+  razon_social String
+  domicilio String
+  email String
+  estado EstadoProveedor
+
+  comprobantes ComprobanteProveedor[]
+}
+
+model TipoComprobanteProveedor {
+  id Int @id @default(autoincrement())
+  nombre String
+  descripcion String
+
+  comprobantes ComprobanteProveedor[]
+}
+
+model ComprobanteProveedor {
+  id Int @id @default(autoincrement())
+  id_proveedor Int
+  id_tipo_comprobante Int
+  fecha DateTime
+  letra String @db.VarChar(1)
+  sucursal String @db.VarChar(1)
+  numero String @db.VarChar(1)
+
+  proveedor Proveedor @relation(fields: [id_proveedor], references: [id])
+  tipo_comprobante TipoComprobanteProveedor @relation(fields: [id_tipo_comprobante], references: [id])
+  orden_pago OrdenPago
+  detalles DetalleComprobanteProveedor[]
+}
+
+model DetalleComprobanteProveedor {
+  id Int @id @default(autoincrement())
+  id_comprobante Int
+  id_articulo Int
+  cantidad Int
+  precio_unitario Int
+  observacion String?
+
+  comprobante ComprobanteProveedor @relation(fields: [id_comprobante], references: [id])
+  articulo Articulo @relation(fields: [id_articulo, references: [id]])
+}
+
+enum EstadoOrdenPago {
+  PENDIENTE
+  PAGADO
+  CANCELADO
+}
+
+model OrdenPago {
+  id Int @id @default(autoincrement())
+  id_comprobante Int
+  fecha DateTime
+  estado EstadoOrdenPago
+
+  comprobante ComprobanteProveedor @relation(fields: [id_comprobante], references: [id])
+}
+
+enum FormaDePago {
+  EFECTIVO
+  TRANSFERENCIA
+}
+
+model DetalleOrdenCompra {
+  id Int @id @default(autoincrement())
+  id_orden Int
+  id_articulo Int
+
+  orden_compra OrdenCompra @relation(fields: [id_orden], references: [id])
+  articulo Articulo @relation(fields: [id_articulo], references [id])
+}
+
+model OrdenCompra {
+  id Int @id @default(autoincrement())
+  precio_total Int
+  forma_pago FormaDePago
+
+  detalle DetalleOrdenCompra[]
 }
