@@ -342,7 +342,7 @@ export async function registerMovimiento(movimiento: MovimientoStockData): Promi
   return { src: src_entry_out, dst: { id: dst_entry.id, date: dst_entry.fecha_hora } };
 }
 
-export async function retrieveMovimientos(deposito: DBId) {
+export async function retrieveMovimientos(deposito: DBId, articulo: DBId | null) {
   let movs = await prisma.movimientoStock.findMany(({
     where: { id_deposito: deposito },
   }));
@@ -366,7 +366,7 @@ export async function retrieveMovimientos(deposito: DBId) {
       return { id: articulo.id, codigo: articulo.codigo, nombre: articulo.nombre };
     });
   })); 
-  return movs.map((mov, idx_mov: number) => {
+  let parsed_things = movs.map((mov, idx_mov: number) => {
     return {
       fecha: mov.fecha_hora,
       tipo: mov.tipo,
@@ -382,5 +382,16 @@ export async function retrieveMovimientos(deposito: DBId) {
       }),
     }
   });
+  if (articulo) {
+    console.log(articulo);
+    return parsed_things.filter((mov) => {
+      let things =  mov.articulos.filter((artic) => {
+        return artic.id_articulo == articulo;
+      });
+      return things.length > 0;
+    });
+  } else {
+    return parsed_things;
+  }
 }
 

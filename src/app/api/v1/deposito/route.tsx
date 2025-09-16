@@ -10,6 +10,29 @@ import {
 } from "@/app/prisma";
 import { TipoMovimiento } from "@/generated/prisma";
 
+
+//nuevo handler para GET (en consultar stock para q filtro me devuelva los depositos)
+export async function GET(req: Request) {
+  return await retrieveDepositos()
+    .then((depos) => {
+      return NextResponse.json(
+        depos.map((depo) => {
+          let data: DepositoData = depo.data;
+          return {
+            id: depo.id,
+            direccion: data.getDireccion(),
+            capacidad: data.getCap(),
+          };
+        })
+      );
+    })
+    .catch((err) => {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    });
+}
+
+
+
 export enum DepositoPostAction {
   get_depositos = 0,
   get_movimientos = 1,
@@ -22,7 +45,16 @@ async function getMovimientos(req: any) {
   if (typeof(id_deposito) != "number") {
     return NextResponse.json({ error: "Código de depósito inválido"}, { status: 400 });
   }
-  let movs = await retrieveMovimientos(Number(id_deposito));
+  let id_articulo: number | null = null;
+  let maybe_articulo = req.id_articulo;
+  if (maybe_articulo && typeof(maybe_articulo) == "number") {
+    id_articulo = Number(maybe_articulo);
+  console.log(id_articulo)
+  } else {
+  console.log("NOTHING")
+  }
+
+  let movs = await retrieveMovimientos(Number(id_deposito), id_articulo);
   if (movs.length == 0) {
     return NextResponse.json({ error: "No entries" }, { status: 400 });
   }
@@ -114,6 +146,8 @@ export async function POST(req: Request) {
     case DepositoPostAction.get_depositos:
       return await getDepositos().catch(handleError);
     case DepositoPostAction.get_movimientos:
+  console.log("AAAAAAAAAA")
+  console.log("AAAAAAAAAA")
       return await getMovimientos(json).catch(handleError);
     case DepositoPostAction.new_deposito:
       return makeDeposito(json).catch(handleError);
