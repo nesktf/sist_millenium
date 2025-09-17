@@ -61,7 +61,8 @@ export async function PUT(req: Request) {
     if (!id) {
       return NextResponse.json({ error: "Falta ID" }, { status: 400 });
     }
-    let data = new ArticuloData(raw_data.codigo, raw_data.nombre);
+    let data = new ArticuloData(raw_data.codigo, raw_data.nombre,
+                                raw_data.id_categoria, raw_data.id_marca);
 
     return await updateArticulo({id: Number(id), data})
     .then(() => {

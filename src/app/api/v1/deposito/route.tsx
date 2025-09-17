@@ -45,7 +45,16 @@ async function getMovimientos(req: any) {
   if (typeof(id_deposito) != "number") {
     return NextResponse.json({ error: "Código de depósito inválido"}, { status: 400 });
   }
-  let movs = await retrieveMovimientos(Number(id_deposito));
+  let id_articulo: number | null = null;
+  let maybe_articulo = req.id_articulo;
+  if (maybe_articulo && typeof(maybe_articulo) == "number") {
+    id_articulo = Number(maybe_articulo);
+  console.log(id_articulo)
+  } else {
+  console.log("NOTHING")
+  }
+
+  let movs = await retrieveMovimientos(Number(id_deposito), id_articulo);
   if (movs.length == 0) {
     return NextResponse.json({ error: "No entries" }, { status: 400 });
   }
@@ -137,6 +146,8 @@ export async function POST(req: Request) {
     case DepositoPostAction.get_depositos:
       return await getDepositos().catch(handleError);
     case DepositoPostAction.get_movimientos:
+  console.log("AAAAAAAAAA")
+  console.log("AAAAAAAAAA")
       return await getMovimientos(json).catch(handleError);
     case DepositoPostAction.new_deposito:
       return makeDeposito(json).catch(handleError);
