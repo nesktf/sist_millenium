@@ -135,12 +135,12 @@ model ComprobanteProveedor {
   id_tipo_comprobante Int
   fecha DateTime
   letra String @db.VarChar(1)
-  sucursal String @db.VarChar(1)
-  numero String @db.VarChar(1)
+  sucursal String @db.VarChar(4)
+  numero String @db.VarChar(8)
 
   proveedor Proveedor @relation(fields: [id_proveedor], references: [id])
   tipo_comprobante TipoComprobanteProveedor @relation(fields: [id_tipo_comprobante], references: [id])
-  orden_pago OrdenPago
+  orden_pago OrdenPago?
   detalles DetalleComprobanteProveedor[]
 }
 
@@ -153,7 +153,7 @@ model DetalleComprobanteProveedor {
   observacion String?
 
   comprobante ComprobanteProveedor @relation(fields: [id_comprobante], references: [id])
-  articulo Articulo @relation(fields: [id_articulo, references: [id]])
+  articulo Articulo @relation(fields: [id_articulo], references: [id])
 }
 
 enum EstadoOrdenPago {
@@ -164,11 +164,11 @@ enum EstadoOrdenPago {
 
 model OrdenPago {
   id Int @id @default(autoincrement())
-  id_comprobante Int
+  id_comprobante Int @unique
   fecha DateTime
   estado EstadoOrdenPago
 
-  comprobante ComprobanteProveedor @relation(fields: [id_comprobante], references: [id])
+  comprobante ComprobanteProveedor? @relation(fields: [id_comprobante], references: [id])
 }
 
 enum FormaDePago {
@@ -182,7 +182,7 @@ model DetalleOrdenCompra {
   id_articulo Int
 
   orden_compra OrdenCompra @relation(fields: [id_orden], references: [id])
-  articulo Articulo @relation(fields: [id_articulo], references [id])
+  articulo Articulo @relation(fields: [id_articulo], references: [id])
 }
 
 model OrdenCompra {
