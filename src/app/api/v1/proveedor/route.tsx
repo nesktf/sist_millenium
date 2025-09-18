@@ -1,24 +1,26 @@
 import { NextResponse } from "next/server";
 import {
-  ArticuloData,
-  retrieveArticulos,
-  registerArticulo,
-  updateArticulo,
-  deleteArticulo,
+  ProveedorData,
+  retrieveProveedor,
+  registerProveedor,
+  updateProveedor,
+  deleteProveedor,
 } from "@/app/prisma";
 
 // Devolver productos
 export async function GET(req: Request) {
-  return await retrieveArticulos().then((prods) => {
+  return await retrieveProveedor().then((provs) => {
     return NextResponse.json(
-      prods.map((prod) => {
-        let data: ArticuloData = prod.data;
+      provs.map((prov) => {
+        let data: ProveedorData = prov.data;
         return {
-          codigo: data.getCodigo(),
-          nombre: data.getNombre(),
-          id: prod.id,
-          marca: prod.marca,
-          categoria: prod.categoria,
+          id: prov.id,
+          nombre: data.getNombreProv(),
+          cuit: data.getCuit(),
+          razon_social: data.getRazonSocial(),
+          domicilio: data.getDomicilio(),
+          email: data.getEmail(),
+          estado: data.getEstado(),
         };
       })
     );
@@ -30,24 +32,24 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const { codigo, nombre, id_categoria, id_marca } = body;
-
+    const { id, nombre, cuit, razon_social, domicilio, email, estado } = body;
+    /*
     // Validación básica
-    if (typeof codigo !== "string" || typeof nombre !== "string") {
+    if (typeof  !== "string" || typeof nombre !== "string") {
       return NextResponse.json(
         { error: "Campos obligatorios faltantes o inválidos" },
         { status: 400 }
       );
-    }
-    return await registerArticulo(
-      new ArticuloData(codigo, nombre, id_categoria, id_marca)
+    }*/
+    return await registerProveedor(
+      new ProveedorData(nombre, cuit, razon_social, domicilio, email, estado)
     ).then((id) => {
       return NextResponse.json({ id }, { status: 201 });
     });
   } catch (error) {
-    console.error("Error al crear artículo:", error);
+    console.error("Error al crear proveedor:", error);
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { error: (error as Error).message || "Error interno del servidor" },
       { status: 500 }
     );
   }
@@ -61,14 +63,16 @@ export async function PUT(req: Request) {
     if (!id) {
       return NextResponse.json({ error: "Falta ID" }, { status: 400 });
     }
-    let data = new ArticuloData(
-      raw_data.codigo,
+    let data = new ProveedorData(
       raw_data.nombre,
-      raw_data.id_categoria,
-      raw_data.id_marca
+      raw_data.cuit,
+      raw_data.razon_social,
+      raw_data.domicilio,
+      raw_data.email,
+      raw_data.estado
     );
 
-    return await updateArticulo({ id: Number(id), data })
+    return await updateProveedor({ id: Number(id), data })
       .then(() => {
         return NextResponse.json({});
       })
@@ -89,7 +93,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Falta ID" }, { status: 400 });
     }
 
-    await deleteArticulo(Number(id));
+    await deleteProveedor(Number(id));
     return NextResponse.json({ message: "Eliminado con éxito" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
