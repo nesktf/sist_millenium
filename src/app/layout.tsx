@@ -34,9 +34,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   Stock
                 </Link>
               </li>
+              <li>
+                <Link href="/proveedor" className="text-lg hover:text-blue-400">
+                  Proveedores
+                </Link>
+              </li>
             </ul>
           </div>
-
           {/* Contenido principal */}
           <div className="flex-1 p-6">
             {children} {/* Aquí se renderiza el contenido de cada página */}

@@ -1,7 +1,4 @@
-// app/movimientos/page.tsx
 "use client";
-
-
 
 import { useState, useEffect } from "react";
 import MovimientosTable from "../components/MovimientosTable";
@@ -16,14 +13,11 @@ export default function MovimientosPage() {
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [depositos, setDepositos] = useState<any[]>([]);
   const [selectedDeposito, setSelectedDeposito] = useState("all");
-  const [articulos, setArticulos] = useState<{ id: number; nombre: string }[]>([]);
-  const [selectedArticulo, setSelectedArticulo] = useState<string>(""); // string porque el select devuelve string
+  const [selectedTipoMovimiento, setSelectedTipoMovimiento] = useState<string>("all");
 
   const [selectedFecha, setSelectedFecha] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-
-
 
   useEffect(() => {
     async function fetchDepositos() {
@@ -40,45 +34,22 @@ export default function MovimientosPage() {
     fetchDepositos();
   }, []);
 
-// Cargar artículos
-  useEffect(() => {
-    async function fetchArticulos() {
-      try {
-        const res = await fetch("/api/v1/prod", { method: "GET" });
-        if (!res.ok) throw new Error(await res.text());
-
-        const data: { id: number; nombre: string }[] = await res.json();
-        setArticulos(data);
-
-        // seleccionar el primero por defecto (opcional)
-        if (data.length && !selectedArticulo) {
-          setSelectedArticulo(String(data[0].id));
-        }
-      } catch (e) {
-        console.error("Error cargando artículos:", e);
-        setArticulos([]);
-      }
-    }
-    fetchArticulos();
-  }, []);
-
-
+  // Cargar tipos de movimiento
+  const tiposMovimiento = [
+    { value: "INGRESO", label: "Ingreso" },
+    { value: "EGRESO", label: "Egreso" },
+    { value: "TRANSFERENCIA", label: "Transferencia" }
+  ];
 
   useEffect(() => {
     fetchMovimientos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDeposito, selectedArticulo, selectedFecha]);
+  }, [selectedDeposito, selectedTipoMovimiento, selectedFecha]);
 
   async function fetchMovimientos() {
-    if (!selectedDeposito) {
-      setIsLoading(false);
-      setMovimientos([]);
-      return;
-    }
-
     setIsLoading(true);
     console.log(selectedDeposito);
-    console.log(selectedArticulo);
+    console.log(selectedTipoMovimiento);
     console.log(selectedFecha);
 
     let res: Response;
@@ -91,7 +62,6 @@ export default function MovimientosPage() {
         body: JSON.stringify({
           action: DepositoPostAction.get_movimientos,
           id_deposito: parseInt(selectedDeposito),
-          id_articulo: selectedArticulo ? parseInt(selectedArticulo) : undefined,
           fecha: selectedFecha || undefined,
         }),
       });
@@ -99,27 +69,46 @@ export default function MovimientosPage() {
 
     if (res.ok) {
       const data = await res.json();
-      const dataToFlatten = data.movimientos || data;
-      const flattenedMovs = (dataToFlatten || []).flatMap((mov: any) =>
-        (mov.articulos || [mov]).map((art: any) => ({
+      let flattenedMovs: any[] = [];
+
+      if (selectedDeposito === "all") {
+        // Para todos los depósitos, los datos vienen directamente como array
+        flattenedMovs = (data || []).map((mov: any) => ({
+          id_mov_stock: mov.id_mov_stock,
           fecha: mov.fecha,
           tipo: mov.tipo,
           comprobante: mov.comprobante,
-          articulo: art.nombre || art.articulo,
-          articulo_id: art.id,
-          cantidad: art.cantidad,
-        }))
-      );
-        console.log(flattenedMovs);
-      if (selectedArticulo) {
-        setMovimientos(flattenedMovs);
+          articulo: mov.articulo,
+          cantidad: mov.cantidad,
+          deposito: mov.deposito,
+        }));
       } else {
+        // Para depósito específico, los datos vienen en data.movimientos
+        const movimientos = data.movimientos || [];
+        flattenedMovs = movimientos.flatMap((mov: any) =>
+          (mov.articulos || []).map((art: any) => ({
+            id_mov_stock: mov.id, // Usar mov.id en lugar de mov.id_mov_stock
+            fecha: mov.fecha,
+            tipo: mov.tipo,
+            comprobante: mov.comprobante,
+            articulo: art.nombre || art.articulo,
+            cantidad: art.cantidad,
+            deposito: mov.deposito,
+          }))
+        );
+      }
+      
+      console.log(flattenedMovs);
+      
+      // Filtrar por tipo de movimiento si no es "all"
+      if (selectedTipoMovimiento !== "all") {
         setMovimientos(flattenedMovs.filter((mov: any) => {
-          return mov.articulo_id == Number(selectedArticulo);
-        }))
+          return mov.tipo === selectedTipoMovimiento;
+        }));
+      } else {
+        setMovimientos(flattenedMovs);
       }
     } else {
-      setIsLoading(false);
       setMovimientos([]);
     }
 
@@ -145,64 +134,63 @@ export default function MovimientosPage() {
           </Link>
         </div>
 
-        {/* Selector de depósito */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 items-end">
-
-        <div className="flex items-center gap-2 md:col-span-4">
-          <label htmlFor="deposito-select" className="font-medium">
-            Selecciona un Depósito:
-          </label>
-          <select
-            id="deposito-select"
-            className="select select-bordered select-sm w-56"
-            value={selectedDeposito}
-            onChange={(e) => setSelectedDeposito(e.target.value)}
-          >
-            <option value="all">Todos los Depósitos</option>
-            {depositos.map((dep: any) => (
-              <option key={dep.id_deposito} value={dep.id_deposito}>
-                {dep.direccion}
-              </option>
-            ))}
-          </select>
-        </div>
-        {/* Selector de producto */}
-
-        <div className="flex items-center gap-2 md:col-span-5">
-          <label htmlFor="articulo-select" className="font-medium">
-            Selecciona un Producto:
-          </label>
-          <select
-            id="articulo-select"
-            className="select select-bordered select-sm w-72"
-            value={selectedArticulo}
-            onChange={(e) => setSelectedArticulo(e.target.value)}
-          >
-            <option value="all">Todos los Artículos</option>
+        {/* Filtros */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 items-end">
+          {/* Selector de depósito */}
+          <div className="flex items-center gap-2 md:col-span-4">
+            <label htmlFor="deposito-select" className="font-medium">
+              Selecciona un Depósito:
+            </label>
+            <select
+              id="deposito-select"
+              className="select select-bordered select-sm w-56"
+              value={selectedDeposito}
+              onChange={(e) => setSelectedDeposito(e.target.value)}
+            >
+              <option value="all">Todos los Depósitos</option>
+              {depositos.map((dep: any) => (
+                <option key={dep.id_deposito} value={dep.id_deposito}>
+                  {dep.direccion}
+                </option>
+              ))}
+            </select>
+          </div>
           
-            {articulos.map((p: any) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
+          {/* Selector de tipo de movimiento */}
+          <div className="flex items-center gap-2 md:col-span-5">
+            <label htmlFor="tipo-select" className="font-medium">
+              Tipo de Movimiento:
+            </label>
+            <select
+              id="tipo-select"
+              className="select select-bordered select-sm w-72"
+              value={selectedTipoMovimiento}
+              onChange={(e) => setSelectedTipoMovimiento(e.target.value)}
+            >
+              <option value="all">Todos los Tipos</option>
+              {tiposMovimiento.map((tipo) => (
+                <option key={tipo.value} value={tipo.value}>
+                  {tipo.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Selector de fecha */}
+          <div className="flex items-center gap-2 md:col-span-3">
+            <label htmlFor="fecha" className="font-medium">
+              Fecha:
+            </label>
+            <input
+              id="fecha"
+              type="date"
+              className="input input-bordered input-sm"
+              value={selectedFecha}
+              onChange={(e) => setSelectedFecha(e.target.value)}
+            />
+          </div>
         </div>
-        {/* Selector de fecha */}
-        <div className="flex items-center gap-2 md:col-span-3">
-          <label htmlFor="fecha" className="font-medium">
-            Fecha:
-          </label>
-          <input
-            id="fecha"
-            type="date"
-            className="input input-bordered input-sm"
-            value={selectedFecha}
-            onChange={(e) => setSelectedFecha(e.target.value)}
-          />
-        </div>
-
       </div>
-  </div>
 
       {/* Tabla de movimientos */}
       <MovimientosTable movimientos={movimientos} isLoading={isLoading} />
