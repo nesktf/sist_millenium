@@ -135,8 +135,8 @@ model ComprobanteProveedor {
   id_tipo_comprobante Int
   fecha DateTime
   letra String @db.VarChar(1)
-  sucursal String @db.VarChar(1)
-  numero String @db.VarChar(1)
+  sucursal String @db.VarChar(4)
+  numero String @db.VarChar(8)
 
   proveedor Proveedor @relation(fields: [id_proveedor], references: [id])
   tipo_comprobante TipoComprobanteProveedor @relation(fields: [id_tipo_comprobante], references: [id])
@@ -168,7 +168,7 @@ model OrdenPago {
   fecha DateTime
   estado EstadoOrdenPago
 
-  comprobante ComprobanteProveedor @relation(fields: [id_comprobante], references: [id])
+  comprobante ComprobanteProveedor? @relation(fields: [id_comprobante], references: [id])
 }
 
 enum FormaDePago {
