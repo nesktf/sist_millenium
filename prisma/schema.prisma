@@ -42,6 +42,7 @@ model Articulo {
 
 model Deposito {
   id          Int @id @default(autoincrement())
+  nombre      String
   direccion   String
   cap_max     Int?
 
@@ -167,6 +168,7 @@ model OrdenPago {
   id_comprobante Int @unique
   fecha DateTime
   estado EstadoOrdenPago
+  cantidad Int?
 
   comprobante ComprobanteProveedor? @relation(fields: [id_comprobante], references: [id])
 }
@@ -189,6 +191,8 @@ model OrdenCompra {
   id Int @id @default(autoincrement())
   precio_total Int
   forma_pago FormaDePago
+  saldo Int
+  total Int
 
   detalle DetalleOrdenCompra[]
 }
