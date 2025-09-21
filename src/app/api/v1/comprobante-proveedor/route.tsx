@@ -1,4 +1,3 @@
-// app/api/v1/comprobante-proveedor/route.tsx
 import { NextResponse } from "next/server";
 import prisma from "@/app/prisma";
 
@@ -41,25 +40,13 @@ export async function POST(req: Request) {
       return nuevoComprobante;
     });
 
-    return NextResponse.json(resultado, { status: 201 }); // 201 = Creado
+    return NextResponse.json(resultado, { status: 201 }); 
 
-  // app/api/v1/comprobante-proveedor/route.tsx
-
-} catch (error) {
-  // --- CÓDIGO MEJORADO PARA VER EL ERROR DETALLADO ---
-  console.error("Error detallado al crear comprobante:", JSON.stringify(error, null, 2));
-
-  // Extraemos un mensaje más específico si es un error de Prisma
-  let errorMessage = "Error interno del servidor";
-  if (error instanceof Error && 'code' in error) {
-      errorMessage = `Error de Prisma: ${error.code}. Revisa la consola del servidor.`;
-  } else if (error instanceof Error) {
-      errorMessage = error.message;
-  }
-
-  return NextResponse.json(
-    { error: errorMessage },
-    { status: 500 }
-  );
+  } catch (error) {
+    console.error("Error al crear comprobante:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
   }
 }

@@ -58,7 +58,7 @@ export default function ComprProveedorPage() {
   const [articulos, setArticulos] = useState<Articulo[]>([]);
   const [detalles, setDetalles] = useState<DetalleComprobante[]>([]);
   const [headerData, setHeaderData] = useState({ numero: '', fecha: '', letra: 'A', id_proveedor: '' });
-  const [detalleData, setDetalleData] = useState({ id_articulo: '', articulo_nombre: '', observacion: '', cantidad: 0, precio_unitario: 0 });
+  const [detalleData, setDetalleData] = useState({ id_articulo: '', articulo_nombre: '', observacion: '', cantidad: "", precio_unitario: "" });
 
   useEffect(() => {
     async function fetchData() {
@@ -80,21 +80,27 @@ export default function ComprProveedorPage() {
       const selectedArticulo = articulos.find(art => art.id === parseInt(value));
       setDetalleData({ ...detalleData, id_articulo: value, articulo_nombre: selectedArticulo?.nombre || '' });
     } else {
-      const valorActualizado = (name === 'cantidad' || name === 'precio_unitario')
-        ? (value === '' ? 0 : parseFloat(value))
-        : value;
-      setDetalleData({ ...detalleData, [name]: valorActualizado });
+      setDetalleData({ ...detalleData, [name]: value });
     }
   };
 
   const handleAddDetalle = () => {
-    if (!detalleData.id_articulo || detalleData.cantidad <= 0 || detalleData.precio_unitario <= 0) {
+    const cantidadNum = parseFloat(detalleData.cantidad) || 0;
+    const precioNum = parseFloat(detalleData.precio_unitario) || 0;
+
+    if (!detalleData.id_articulo || cantidadNum <= 0 || precioNum <= 0) {
       alert("Por favor, selecciona un artículo y asegúrate de que la cantidad y el precio sean mayores a cero.");
       return;
     }
-    const nuevoDetalle = { ...detalleData, id_articulo: parseInt(detalleData.id_articulo) };
+
+    const nuevoDetalle = {
+      ...detalleData,
+      id_articulo: parseInt(detalleData.id_articulo),
+      cantidad: cantidadNum,
+      precio_unitario: precioNum,
+    };
     setDetalles([...detalles, nuevoDetalle]);
-    setDetalleData({ id_articulo: '', articulo_nombre: '', observacion: '', cantidad: 0, precio_unitario: 0 });
+    setDetalleData({ id_articulo: '', articulo_nombre: '', observacion: '', cantidad: '', precio_unitario: '' });
   };
   
   const handleDeleteDetalle = (indexToDelete: number) => {
@@ -186,11 +192,11 @@ export default function ComprProveedorPage() {
               </div>
               <div className="form-control w-full">
                 <label htmlFor="cantidad" className="label py-1"><span className="label-text">Cantidad</span></label>
-                <input id="cantidad" name="cantidad" type="number" min={0} value={detalleData.cantidad} onChange={handleDetalleChange} className="input input-sm input-bordered w-full" />
+                <input id="cantidad" name="cantidad" type="number" min={0} value={detalleData.cantidad} onChange={handleDetalleChange} placeholder="0" className="input input-sm input-bordered w-full" />
               </div>
               <div className="form-control w-full">
                 <label htmlFor="precio_unitario" className="label py-1"><span className="label-text">Precio</span></label>
-                <input id="precio_unitario" name="precio_unitario" type="number" min={0} value={detalleData.precio_unitario} onChange={handleDetalleChange} className="input input-sm input-bordered w-full" />
+                <input id="precio_unitario" name="precio_unitario" type="number" min={0} value={detalleData.precio_unitario} onChange={handleDetalleChange} placeholder="0" className="input input-sm input-bordered w-full" />
               </div>
               <div className="form-control w-full md:col-span-2">
                 <label htmlFor="observacion" className="label py-1"><span className="label-text">Observación</span></label>
