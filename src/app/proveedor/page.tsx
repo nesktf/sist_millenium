@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import ProveedorForm from "../components/ProveedorForm";
 import ModalProveedor from "../components/ModalProveedor";
+import Link from "next/link";
 
 export default function ProveedorPage() {
   const [proveedor, setProveedor] = useState<any[]>([]);
@@ -110,6 +111,10 @@ export default function ProveedorPage() {
           >
             Agregar proveedor
           </button>
+
+          <Link href="/proveedor/comprobante" className="btn btn-accent">
+            Comprobantes
+          </Link>
         </div>
 
         {/* 🔎 Filtros */}

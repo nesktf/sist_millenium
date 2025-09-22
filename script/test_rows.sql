@@ -1,14 +1,14 @@
 BEGIN;
 
 -- 1) Depósitos  (idempotente, sin UNIQUE en direccion usamos NOT EXISTS)
-INSERT INTO "Deposito" ("id", "direccion", "cap_max")
+INSERT INTO "Deposito" ("id", "nombre", "direccion", "cap_max")
 VALUES
-  (1, 'Depósito Principal', 1000),
-  (2, 'Calle Falsa 123', 100),
-  (3, 'Calle Real 321', 200),
-  (4, 'Calle Tal Vez Real 789', 300),
-  (5, 'Calle Tal Vez Falsa 987', 200),
-  (6, 'Calle Cuántica 456654', 900);
+  (1, 'Depósito Principal', 'Calle Cuántica 000', 1000),
+  (2, 'Deposito Hakurei', 'Calle Falsa 123', 400),
+  (3, 'Depósito Moriya', 'Calle Real 321', 400),
+  (4, 'Depósito Scarlet', 'Calle Tal Vez Real 789', 500),
+  (5, 'Depósito Kappa', 'Calle Tal Vez Falsa 987', 900),
+  (6, 'Depósito Yamawaro', 'Calle Cuántica 456654', 900);
 
 -- 2) Marcas
 INSERT INTO "MarcaArticulo" ("id", "nombre")
@@ -115,23 +115,27 @@ INSERT INTO "DetalleMovimiento" ("id", "id_movimiento", "id_artic_depos", "canti
 VALUES
   (1, 1, 1, 20);
 
--- INSERT INTO "ArticDepos" ("id_deposito", "id_articulo", "stock", "stock_min")
--- SELECT d.id, a.id, 12, 3
--- FROM "Deposito" d
--- JOIN "Articulo" a ON a.codigo = 'rtx4153'
--- WHERE d."direccion" = 'Depósito Principal'
---   AND NOT EXISTS (
---     SELECT 1 FROM "ArticDepos" ad 
---     WHERE ad."id_deposito" = d.id AND ad."id_articulo" = a.id
---   );
+INSERT INTO "Proveedor" (id, nombre, cuit, razon_social, domicilio, email, estado) VALUES
+  (1, 'Distribuciones Alfa', '30-12345678-9', 'Distribuciones Alfa SRL', 'Calle Falsa 123, Ciudad', 'contacto@alfa.com', 'ACTIVO'),
+  (2, 'Suministros Beta', '20-87654321-0', 'Suministros Beta SA', 'Av. Siempre Viva 742, Ciudad', 'ventas@beta.com', 'ACTIVO'),
+  (3, 'Gamma Proveedores', '27-11223344-5', 'Gamma Proveedores SA', 'Calle Luna 456, Ciudad', 'info@gamma.com', 'INACTIVO'),
+  (4, 'Delta Comercial', '30-55667788-1', 'Delta Comercial SRL', 'Calle Sol 789, Ciudad', 'contacto@delta.com', 'ACTIVO'),
+  (5, 'Epsilon S.A.', '23-99887766-2', 'Epsilon Sociedad Anónima', 'Av. Estrella 321, Ciudad', 'ventas@epsilon.com', 'INACTIVO'),
+  (6, 'Zeta Distribuciones', '20-33445566-7', 'Zeta Distribuciones SRL', 'Calle Mar 654, Ciudad', 'info@zeta.com', 'ACTIVO'),
+  (7, 'Eta Proveedores', '27-66778899-3', 'Eta Proveedores SA', 'Av. Tierra 987, Ciudad', 'contacto@eta.com', 'ACTIVO'),
+  (8, 'Theta Comercial', '30-22334455-6', 'Theta Comercial SRL', 'Calle Aire 213, Ciudad', 'ventas@theta.com', 'INACTIVO'),
+  (9, 'Iota Suministros', '23-44556677-4', 'Iota Suministros SA', 'Av. Agua 432, Ciudad', 'info@iota.com', 'ACTIVO'),
+  (10, 'Kappa Proveedores', '20-55667788-5', 'Kappa Proveedores SRL', 'Calle Fuego 765, Ciudad', 'contacto@kappa.com', 'ACTIVO');
 
 -- Reset ids
+ALTER SEQUENCE "Deposito_id_seq" RESTART WITH 7;
 ALTER SEQUENCE "Articulo_id_seq" RESTART WITH 31;
 ALTER SEQUENCE "CategoriaArticulo_id_seq" RESTART WITH 21;
 ALTER SEQUENCE "MarcaArticulo_id_seq" RESTART WITH 7;
 ALTER SEQUENCE "ArticDepos_id_seq" RESTART WITH 2;
 ALTER SEQUENCE "MovimientoStock_id_seq" RESTART WITH 2;
 ALTER SEQUENCE "DetalleMovimiento_id_seq" RESTART WITH 3;
+ALTER SEQUENCE "Proveedor_id_seq" RESTART WITH 11;
 
 COMMIT;
 
