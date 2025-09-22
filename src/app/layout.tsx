@@ -1,5 +1,5 @@
 // src/app/layout.tsx
-//import "./globals.css";
+import "./globals.css";
 import { ReactNode } from "react";
 import Link from "next/link"; // Asegúrate de importar Link para la navegación
 
