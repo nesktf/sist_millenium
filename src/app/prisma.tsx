@@ -107,15 +107,18 @@ export async function deleteArticulo(id: DBId) {
 }
 
 export class DepositoData {
+  private nombre: string;
   private direccion: string;
   private capMax?: number;
 
-  constructor(direccion: string, capMax?: number | null) {
+  constructor(nombre:string, direccion: string, capMax?: number | null) {
+    this.nombre = nombre;
     this.direccion = direccion;
     if (capMax) {
       this.capMax = Math.round(capMax);
     }
   }
+  getNombre(): string { return this.nombre; }
 
   getDireccion(): string {
     return this.direccion;
@@ -132,6 +135,7 @@ export async function registerDeposito(data: DepositoData): Promise<DBId> {
   return await prisma.deposito
     .create({
       data: {
+        nombre: data.getNombre(),
         direccion: data.getDireccion(),
         cap_max: data.getCap(),
       },
@@ -148,7 +152,7 @@ export async function retrieveDepositos(): Promise<
     return entries.map((entry) => {
       return {
         id: entry.id,
-        data: new DepositoData(entry.direccion, entry.cap_max),
+        data: new DepositoData(entry.nombre, entry.direccion, entry.cap_max),
       };
     });
   });
@@ -160,7 +164,7 @@ export async function findDeposito(id: DBId): Promise<DepositoData> {
       where: { id: id },
     })
     .then((entry): DepositoData => {
-      return new DepositoData(entry.direccion, entry.cap_max);
+      return new DepositoData(entry.nombre, entry.direccion, entry.cap_max);
     });
 }
 
