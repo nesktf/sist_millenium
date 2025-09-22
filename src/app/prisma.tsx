@@ -111,15 +111,17 @@ export class DepositoData {
   private direccion: string;
   private capMax?: number;
 
-  constructor(nombre:string, direccion: string, capMax?: number | null) {
+  constructor(nombre: string, direccion: string, capMax?: number | null) {
     this.nombre = nombre;
     this.direccion = direccion;
     if (capMax) {
       this.capMax = Math.round(capMax);
     }
   }
-  getNombre(): string { return this.nombre; }
 
+  getNombre(): string {
+    return this.nombre;
+  }
   getDireccion(): string {
     return this.direccion;
   }
@@ -621,6 +623,82 @@ export async function updateProveedor(entry: DBData<ProveedorData>) {
 
 export async function deleteProveedor(id: DBId) {
   await prisma.proveedor.delete({
+    where: { id: id },
+  });
+}
+
+// DEPOSITOs
+
+export class DepositoDatas {
+  private nombre: string;
+  private direccion: string;
+  private cap_max: number;
+
+  constructor(nombre: string, direccion: string, cap_max: number) {
+    this.nombre = nombre;
+    this.direccion = direccion;
+    this.cap_max = cap_max;
+  }
+
+  getNombre(): string {
+    return this.nombre;
+  }
+  getDireccion(): string {
+    return this.direccion;
+  }
+  getCapMax(): number {
+    return this.cap_max;
+  }
+}
+
+export async function retrieveDeposito() {
+  return await prisma.deposito.findMany({}).then((entries) => {
+    return entries.map((entry) => {
+      let data = new DepositoDatas(
+        entry.nombre,
+        entry.direccion,
+        entry.cap_max ?? 0
+      );
+      return {
+        id: entry.id,
+        data: data,
+        nombre: entry.nombre,
+        cuit: entry.direccion,
+        razon_social: entry.cap_max,
+      };
+    });
+  });
+}
+
+export async function registerDepositos(
+  deposito: DepositoDatas
+): Promise<DBId> {
+  return await prisma.deposito
+    .create({
+      data: {
+        nombre: deposito.getNombre(),
+        direccion: deposito.getDireccion(),
+        cap_max: deposito.getCapMax(),
+      },
+    })
+    .then((entry): DBId => {
+      return entry.id;
+    });
+}
+
+export async function updateDeposito(entry: DBData<DepositoDatas>) {
+  await prisma.deposito.update({
+    where: { id: entry.id },
+    data: {
+      nombre: entry.data.getNombre(),
+      direccion: entry.data.getDireccion(),
+      cap_max: entry.data.getCapMax(),
+    },
+  });
+}
+
+export async function deleteDeposito(id: DBId) {
+  await prisma.deposito.delete({
     where: { id: id },
   });
 }
