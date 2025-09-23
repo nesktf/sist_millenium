@@ -2,12 +2,31 @@
 import { NextResponse, NextRequest } from "next/server";
 import prisma from "@/app/prisma";
 
+function buildDateRange(fecha: string, timezoneOffset?: number) {
+  const [year, month, day] = String(fecha).split("-").map(Number);
+  if (!year || !month || !day) {
+    throw new Error("Fecha inválida");
+  }
+
+  const offsetMinutes =
+    typeof timezoneOffset === "number" && !Number.isNaN(timezoneOffset)
+      ? timezoneOffset
+      : 0;
+  const baseUtcMs = Date.UTC(year, month - 1, day, 0, 0, 0);
+  const startDate = new Date(baseUtcMs + offsetMinutes * 60 * 1000);
+  const endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+
+  return { startDate, endDate };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const tipo = searchParams.get('tipo');
     const articuloId = searchParams.get('articuloId');
     const fecha = searchParams.get('fecha');
+    const timezoneOffsetParam = searchParams.get('timezoneOffset');
+    const timezoneOffset = timezoneOffsetParam != null ? Number(timezoneOffsetParam) : undefined;
 
     const whereClause: any = {};
 
@@ -24,13 +43,15 @@ export async function GET(request: NextRequest) {
       };
     }
     if (fecha) {
-      const startDate = new Date(fecha);
-      const endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 1);
-      whereClause.fecha_hora = {
-        gte: startDate,
-        lt: endDate,
-      };
+      try {
+        const { startDate, endDate } = buildDateRange(fecha, timezoneOffset);
+        whereClause.fecha_hora = {
+          gte: startDate,
+          lt: endDate,
+        };
+      } catch (err) {
+        return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
+      }
     }
 
     const movimientos = await prisma.movimientoStock.findMany({

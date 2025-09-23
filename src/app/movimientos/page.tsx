@@ -57,8 +57,12 @@ export default function MovimientosPage() {
   async function fetchMovimientos() {
     setIsLoading(true);
 
+    const timezoneOffset = new Date().getTimezoneOffset();
     const params = new URLSearchParams();
-    if (selectedFecha) params.append('fecha', selectedFecha);
+    if (selectedFecha) {
+      params.append('fecha', selectedFecha);
+      params.append('timezoneOffset', timezoneOffset.toString());
+    }
     if (selectedArticulo !== "all") params.append('articuloId', selectedArticulo);
 
     let res: Response;
@@ -72,6 +76,7 @@ export default function MovimientosPage() {
           action: DepositoPostAction.get_movimientos,
           id_deposito: parseInt(selectedDeposito),
           fecha: selectedFecha || undefined,
+          timezoneOffset,
           articuloId: selectedArticulo === 'all' ? undefined : parseInt(selectedArticulo),
         }),
       });
