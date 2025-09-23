@@ -1,33 +1,50 @@
 // app/api/v1/movimientos/all/route.tsx
+import { NextResponse, NextRequest } from "next/server";
+import prisma from "@/app/prisma";
 
-import { NextResponse } from "next/server";
-import  prisma  from "@/app/prisma";
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Obtener todos los movimientos con sus detalles y artículos relacionados
-    // CAMBIO: Incluir solo un depósito por movimiento
+    const { searchParams } = request.nextUrl;
+    const tipo = searchParams.get('tipo');
+    const articuloId = searchParams.get('articuloId');
+    const fecha = searchParams.get('fecha');
+
+    const whereClause: any = {};
+
+    if (tipo && tipo !== "all") {
+      whereClause.tipo = tipo;
+    }
+    if (articuloId && articuloId !== "all") {
+      whereClause.detalles_mov = {
+        some: {
+          artic_depos: {
+            id_articulo: parseInt(articuloId),
+          },
+        },
+      };
+    }
+    if (fecha) {
+      const startDate = new Date(fecha);
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 1);
+      whereClause.fecha_hora = {
+        gte: startDate,
+        lt: endDate,
+      };
+    }
+
     const movimientos = await prisma.movimientoStock.findMany({
+      where: whereClause,
       include: {
-        
         deposito: true,
         tipo_comprobante: true,
         detalles_mov: {
-          include: {
-            artic_depos: {
-              include: {
-                articulo: true,
-              },
-            },
-          },
+          include: { artic_depos: { include: { articulo: true } } },
         },
       },
-      orderBy: {
-        fecha_hora: 'desc',
-      },
+      orderBy: { fecha_hora: 'desc' },
     });
 
-    // Transformar los datos para la respuesta
     const resultado = movimientos.flatMap((mov) =>
       mov.detalles_mov.map((detalle) => ({
         id_mov_stock: mov.id,
@@ -36,7 +53,6 @@ export async function GET() {
         comprobante: `${mov.tipo_comprobante?.nombre || ''} - ${mov.num_comprobante || ''}`,
         articulo: detalle.artic_depos.articulo.nombre,
         cantidad: detalle.cantidad,
-        // CAMBIO: Ahora solo hay un depósito por movimiento
         deposito: mov.deposito.direccion,
       }))
     );
@@ -44,10 +60,7 @@ export async function GET() {
     return NextResponse.json(resultado);
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Error al obtener todos los movimientos" },
-      { status: 500 }
-    );
+    console.error("Error al obtener todos los movimientos:", error);
+    return NextResponse.json({ error: "Error al obtener todos los movimientos" }, { status: 500 });
   }
 }

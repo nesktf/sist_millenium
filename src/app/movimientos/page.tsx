@@ -7,54 +7,63 @@ import Modal from "../components/Modal";
 import Link from "next/link";
 import { DepositoPostAction } from "../api/v1/deposito/route";
 
-type ArticuloOpt = { id_articulo: number; nombre: string };
 
 export default function MovimientosPage() {
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [depositos, setDepositos] = useState<any[]>([]);
+  const [articulos, setArticulos] = useState<any[]>([]); 
+
+  // Estados de los filtros
   const [selectedDeposito, setSelectedDeposito] = useState("all");
   const [selectedTipoMovimiento, setSelectedTipoMovimiento] = useState<string>("all");
-
+  const [selectedArticulo, setSelectedArticulo] = useState("all"); 
   const [selectedFecha, setSelectedFecha] = useState("");
+
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    async function fetchDepositos() {
-      const res = await fetch("/api/v1/deposito", {
+    async function fetchData() {
+      const resDepositos = await fetch("/api/v1/deposito", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: 0 }),
       });
-      if (res.ok) {
-        const data = await res.json();
+      if (resDepositos.ok) {
+        const data = await resDepositos.json();
         setDepositos(data.depositos || []);
       }
+
+      const resArticulos = await fetch('/api/v1/prod');
+      if (resArticulos.ok) {
+        setArticulos(await resArticulos.json());
+      }
     }
-    fetchDepositos();
+    fetchData();
   }, []);
 
-  // Cargar tipos de movimiento
   const tiposMovimiento = [
     { value: "INGRESO", label: "Ingreso" },
     { value: "EGRESO", label: "Egreso" },
     { value: "TRANSFERENCIA", label: "Transferencia" }
   ];
 
+
   useEffect(() => {
     fetchMovimientos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDeposito, selectedTipoMovimiento, selectedFecha]);
+  }, [selectedDeposito, selectedTipoMovimiento, selectedFecha, selectedArticulo]);
+
 
   async function fetchMovimientos() {
     setIsLoading(true);
-    console.log(selectedDeposito);
-    console.log(selectedTipoMovimiento);
-    console.log(selectedFecha);
+
+    const params = new URLSearchParams();
+    if (selectedFecha) params.append('fecha', selectedFecha);
+    if (selectedArticulo !== "all") params.append('articuloId', selectedArticulo);
 
     let res: Response;
     if (selectedDeposito === "all") {
-      res = await fetch(`/api/v1/movimientos/all`, { cache: "no-store" });
+      res = await fetch(`/api/v1/movimientos/all?${params.toString()}`, { cache: "no-store" });
     } else {
       res = await fetch("/api/v1/deposito", {
         method: "POST",
@@ -63,6 +72,7 @@ export default function MovimientosPage() {
           action: DepositoPostAction.get_movimientos,
           id_deposito: parseInt(selectedDeposito),
           fecha: selectedFecha || undefined,
+          articuloId: selectedArticulo === 'all' ? undefined : parseInt(selectedArticulo),
         }),
       });
     }
@@ -72,7 +82,6 @@ export default function MovimientosPage() {
       let flattenedMovs: any[] = [];
 
       if (selectedDeposito === "all") {
-        // Para todos los depósitos, los datos vienen directamente como array
         flattenedMovs = (data || []).map((mov: any) => ({
           id_mov_stock: mov.id_mov_stock,
           fecha: mov.fecha,
@@ -83,28 +92,26 @@ export default function MovimientosPage() {
           deposito: mov.deposito,
         }));
       } else {
-        // Para depósito específico, los datos vienen en data.movimientos
-        const movimientos = data.movimientos || [];
-        flattenedMovs = movimientos.flatMap((mov: any) =>
-          (mov.articulos || []).map((art: any) => ({
-            id_mov_stock: mov.id, // Usar mov.id en lugar de mov.id_mov_stock
-            fecha: mov.fecha,
-            tipo: mov.tipo,
-            comprobante: mov.comprobante,
-            articulo: art.nombre || art.articulo,
-            cantidad: art.cantidad,
-            deposito: mov.deposito,
-          }))
-        );
+        if (Array.isArray(data)) {
+          flattenedMovs = data;
+        } else {
+          const movimientos = data.movimientos || [];
+          flattenedMovs = movimientos.flatMap((mov: any) =>
+            (mov.articulos || []).map((art: any) => ({
+              id_mov_stock: mov.id,
+              fecha: mov.fecha,
+              tipo: mov.tipo,
+              comprobante: mov.comprobante,
+              articulo: art.nombre || art.articulo,
+              cantidad: art.cantidad,
+              deposito: mov.deposito,
+            }))
+          );
+        }
       }
       
-      console.log(flattenedMovs);
-      
-      // Filtrar por tipo de movimiento si no es "all"
       if (selectedTipoMovimiento !== "all") {
-        setMovimientos(flattenedMovs.filter((mov: any) => {
-          return mov.tipo === selectedTipoMovimiento;
-        }));
+        setMovimientos(flattenedMovs.filter((mov: any) => mov.tipo === selectedTipoMovimiento));
       } else {
         setMovimientos(flattenedMovs);
       }
@@ -119,9 +126,7 @@ export default function MovimientosPage() {
     <main className="p-6">
       <h1 className="text-2xl font-bold mb-4">Historial de Movimientos</h1>
 
-      {/* Header con botones y selector */}
       <div className="mb-4">
-        {/* Botones */}
         <div className="flex gap-4 mb-3">
           <button
             onClick={() => setShowForm(true)}
@@ -135,15 +140,13 @@ export default function MovimientosPage() {
         </div>
 
         {/* Filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-end">
           {/* Selector de depósito */}
-          <div className="flex items-center gap-2 md:col-span-4">
-            <label htmlFor="deposito-select" className="font-medium">
-              Selecciona un Depósito:
-            </label>
+          <div className="form-control">
+            <label htmlFor="deposito-select" className="label pb-1"><span className="label-text font-medium">Depósito:</span></label>
             <select
               id="deposito-select"
-              className="select select-bordered select-sm w-56"
+              className="select select-bordered select-sm w-full"
               value={selectedDeposito}
               onChange={(e) => setSelectedDeposito(e.target.value)}
             >
@@ -156,14 +159,30 @@ export default function MovimientosPage() {
             </select>
           </div>
           
+          {/*NUEVO FILTRO DE ARTÍCULO*/}
+          <div className="form-control">
+            <label htmlFor="articulo-select" className="label pb-1"><span className="label-text font-medium">Artículo:</span></label>
+            <select
+              id="articulo-select"
+              className="select select-bordered select-sm w-full"
+              value={selectedArticulo}
+              onChange={(e) => setSelectedArticulo(e.target.value)}
+            >
+              <option value="all">Todos los Artículos</option>
+              {articulos.map((art: any) => (
+                <option key={art.id} value={art.id}>
+                  {art.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Selector de tipo de movimiento */}
-          <div className="flex items-center gap-2 md:col-span-5">
-            <label htmlFor="tipo-select" className="font-medium">
-              Tipo de Movimiento:
-            </label>
+          <div className="form-control">
+            <label htmlFor="tipo-select" className="label pb-1"><span className="label-text font-medium">Tipo de Movimiento:</span></label>
             <select
               id="tipo-select"
-              className="select select-bordered select-sm w-72"
+              className="select select-bordered select-sm w-full"
               value={selectedTipoMovimiento}
               onChange={(e) => setSelectedTipoMovimiento(e.target.value)}
             >
@@ -177,14 +196,12 @@ export default function MovimientosPage() {
           </div>
           
           {/* Selector de fecha */}
-          <div className="flex items-center gap-2 md:col-span-3">
-            <label htmlFor="fecha" className="font-medium">
-              Fecha:
-            </label>
+          <div className="form-control">
+            <label htmlFor="fecha" className="label pb-1"><span className="label-text font-medium">Fecha:</span></label>
             <input
               id="fecha"
               type="date"
-              className="input input-bordered input-sm"
+              className="input input-bordered input-sm w-full"
               value={selectedFecha}
               onChange={(e) => setSelectedFecha(e.target.value)}
             />
@@ -192,7 +209,6 @@ export default function MovimientosPage() {
         </div>
       </div>
 
-      {/* Tabla de movimientos */}
       <MovimientosTable movimientos={movimientos} isLoading={isLoading} />
 
       {/* Modal con formulario */}

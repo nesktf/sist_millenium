@@ -11,9 +11,9 @@ import {
   retrieveMovimientos
 } from "@/app/prisma";
 import { TipoMovimiento } from "@/generated/prisma";
+import prisma from "@/app/prisma";
 
 
-//nuevo handler para GET (en consultar stock para q filtro me devuelva los depositos)
 export async function GET(req: Request) {
   return await retrieveDepositos()
     .then((depos) => {
@@ -42,25 +42,72 @@ export enum DepositoPostAction {
   new_movimiento = 3,
 };
 
-async function getMovimientos(req: any) {
-  let id_deposito = req.id_deposito;
-  if (typeof(id_deposito) != "number") {
-    return NextResponse.json({ error: "Código de depósito inválido"}, { status: 400 });
-  }
-  let id_articulo: number | null = null;
-  let maybe_articulo = req.id_articulo;
-  if (maybe_articulo && typeof(maybe_articulo) == "number") {
-    id_articulo = Number(maybe_articulo);
-  console.log(id_articulo)
-  } else {
-  console.log("NOTHING")
-  }
 
-  let movs = await retrieveMovimientos(Number(id_deposito), id_articulo);
-  if (movs.length == 0) {
-    return NextResponse.json({ error: "No entries" }, { status: 400 });
+async function getMovimientos(req: any) {
+  try {
+    const { id_deposito, fecha, tipo, articuloId } = req;
+
+    if (typeof id_deposito !== "number") {
+      return NextResponse.json({ error: "Código de depósito inválido" }, { status: 400 });
+    }
+
+    const whereClause: any = {
+      id_deposito: id_deposito,
+    };
+
+    if (tipo && tipo !== "all") {
+      whereClause.tipo = tipo;
+    }
+    if (articuloId && articuloId !== "all") {
+      whereClause.detalles_mov = {
+        some: {
+          artic_depos: {
+            id_articulo: articuloId,
+          },
+        },
+      };
+    }
+    if (fecha) {
+      const startDate = new Date(fecha);
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 1);
+      whereClause.fecha_hora = {
+        gte: startDate,
+        lt: endDate,
+      };
+    }
+
+    // --- Usamos Prisma directamente para asegurar que la consulta sea correcta ---
+    const movimientos = await prisma.movimientoStock.findMany({
+      where: whereClause,
+      include: {
+        deposito: true,
+        tipo_comprobante: true,
+        detalles_mov: {
+          include: { artic_depos: { include: { articulo: true } } },
+        },
+      },
+      orderBy: { fecha_hora: 'desc' },
+    });
+    
+    const resultadoAplanado = movimientos.flatMap((mov) =>
+      mov.detalles_mov.map((detalle) => ({
+          id_mov_stock: mov.id,
+          fecha: mov.fecha_hora,
+          tipo: mov.tipo,
+          comprobante: `${mov.tipo_comprobante?.nombre || ''} - ${mov.num_comprobante || ''}`,
+          articulo: detalle.artic_depos.articulo.nombre,
+          cantidad: detalle.cantidad,
+          deposito: mov.deposito.direccion,
+      }))
+    );
+
+    return NextResponse.json(resultadoAplanado);
+
+  } catch (error) {
+    console.error("Error en getMovimientos:", error);
+    return NextResponse.json({ error: "Error al procesar la solicitud de movimientos" }, { status: 500 });
   }
-  return NextResponse.json({ id_deposito: Number(id_deposito), movimientos: movs });
 }
 
 async function getDepositos() {
@@ -85,9 +132,7 @@ async function makeDeposito(req: any) {
   if (typeof(direccion) != "string") {
     return NextResponse.json({ error: "Dirección de depósito inválida"}, { status: 400 });
   }
-  // if (typeof(capacidad) != "number" || typeof(capacidad) != "undefined") {
-  //   return NextResponse.json({ error: "Capacidad de depósito inválida"}, { status: 400 });
-  // }
+
   let id = await registerDeposito(new DepositoData(direccion, capacidad));
   return NextResponse.json({id_deposito: id});
 }
