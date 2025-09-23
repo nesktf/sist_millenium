@@ -69,12 +69,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   </Link>
                 </li>
                 <li>
-                  <Link href="" className="hover:text-blue-400">
+                  <Link href="/proveedor/comprobante" className="hover:text-blue-400">
                     Registrar Comprobante Proveedor
                   </Link>
                 </li>
                 <li>
-                  <Link href="" className="hover:text-blue-400">
+                  <Link href="/ordenpago" className="hover:text-blue-400">
                     Registrar Orden de Pago
                   </Link>
                 </li>
