@@ -1,6 +1,6 @@
 // app/api/v1/movimientos/all/route.tsx
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   ArticuloDepositoData,
   DepositoData,
@@ -8,9 +8,9 @@ import {
   registerDeposito,
   registerMovimiento,
   retrieveDepositos,
-  retrieveMovimientos,
 } from "@/app/prisma";
 import { TipoMovimiento } from "@/generated/prisma";
+import prisma from "@/app/prisma";
 
 //nuevo handler para GET (en consultar stock para q filtro me devuelva los depositos)
 export async function GET(req: Request) {
@@ -40,31 +40,94 @@ export enum DepositoPostAction {
   new_movimiento = 3,
 }
 
-async function getMovimientos(req: any) {
-  let id_deposito = req.id_deposito;
-  if (typeof id_deposito != "number") {
-    return NextResponse.json(
-      { error: "Código de depósito inválido" },
-      { status: 400 }
-    );
-  }
-  let id_articulo: number | null = null;
-  let maybe_articulo = req.id_articulo;
-  if (maybe_articulo && typeof maybe_articulo == "number") {
-    id_articulo = Number(maybe_articulo);
-    console.log(id_articulo);
-  } else {
-    console.log("NOTHING");
+function buildDateRange(fecha: string, timezoneOffset?: number) {
+  const [year, month, day] = String(fecha).split("-").map(Number);
+  if (!year || !month || !day) {
+    throw new Error("Fecha inválida");
   }
 
-  let movs = await retrieveMovimientos(Number(id_deposito), id_articulo);
-  if (movs.length == 0) {
-    return NextResponse.json({ error: "No entries" }, { status: 400 });
+  const offsetMinutes =
+    typeof timezoneOffset === "number" && !Number.isNaN(timezoneOffset)
+      ? timezoneOffset
+      : 0;
+  const baseUtcMs = Date.UTC(year, month - 1, day, 0, 0, 0);
+  const startDate = new Date(baseUtcMs + offsetMinutes * 60 * 1000);
+  const endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+
+  return { startDate, endDate };
+}
+
+async function getMovimientos(req: any) {
+  try {
+    const { id_deposito, fecha, tipo, articuloId } = req;
+    const timezoneOffset =
+      typeof req.timezoneOffset === "number"
+        ? req.timezoneOffset
+        : Number(req.timezoneOffset);
+
+    if (typeof id_deposito !== "number") {
+      return NextResponse.json({ error: "Código de depósito inválido" }, { status: 400 });
+    }
+
+    const whereClause: any = {
+      id_deposito: id_deposito,
+    };
+
+    if (tipo && tipo !== "all") {
+      whereClause.tipo = tipo;
+    }
+    if (articuloId && articuloId !== "all") {
+      whereClause.detalles_mov = {
+        some: {
+          artic_depos: {
+            id_articulo: articuloId,
+          },
+        },
+      };
+    }
+    if (fecha) {
+      try {
+        const { startDate, endDate } = buildDateRange(fecha, timezoneOffset);
+        whereClause.fecha_hora = {
+          gte: startDate,
+          lt: endDate,
+        };
+      } catch (err) {
+        return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
+      }
+    }
+
+    // --- Usamos Prisma directamente para asegurar que la consulta sea correcta ---
+    const movimientos = await prisma.movimientoStock.findMany({
+      where: whereClause,
+      include: {
+        deposito: true,
+        tipo_comprobante: true,
+        detalles_mov: {
+          include: { artic_depos: { include: { articulo: true } } },
+        },
+      },
+      orderBy: { fecha_hora: 'desc' },
+    });
+    
+    const resultadoAplanado = movimientos.flatMap((mov) =>
+      mov.detalles_mov.map((detalle) => ({
+          id_mov_stock: mov.id,
+          fecha: mov.fecha_hora,
+          tipo: mov.tipo,
+          comprobante: `${mov.tipo_comprobante?.nombre || ''} - ${mov.num_comprobante || ''}`,
+          articulo: detalle.artic_depos.articulo.nombre,
+          cantidad: detalle.cantidad,
+          deposito: mov.deposito.direccion,
+      }))
+    );
+
+    return NextResponse.json(resultadoAplanado);
+
+  } catch (error) {
+    console.error("Error en getMovimientos:", error);
+    return NextResponse.json({ error: "Error al procesar la solicitud de movimientos" }, { status: 500 });
   }
-  return NextResponse.json({
-    id_deposito: Number(id_deposito),
-    movimientos: movs,
-  });
 }
 
 async function getDepositos() {
@@ -74,7 +137,6 @@ async function getDepositos() {
   }
   return NextResponse.json({
     depositos: depos.map((depo) => {
-      depo.data.getDireccion;
       return {
         id_deposito: depo.id,
         direccion: depo.data.getDireccion(),
@@ -85,7 +147,13 @@ async function getDepositos() {
 }
 
 async function makeDeposito(req: any) {
-  let { direccion, capacidad } = req;
+  let { nombre, direccion, capacidad } = req;
+  if (typeof nombre != "string") {
+    return NextResponse.json(
+      { error: "Nombre de depósito inválido" },
+      { status: 400 }
+    );
+  }
   if (typeof direccion != "string") {
     return NextResponse.json(
       { error: "Dirección de depósito inválida" },
