@@ -2,33 +2,33 @@ import { ItemOrdenCompra, OrdenCompraData, registerOrdenCompra, retrieveArticulo
 import { FormaDePago } from "@/generated/prisma";
 import { NextRequest, NextResponse } from "next/server"
 
-export default async function GET(req: NextRequest) { 
+export async function GET(req: NextRequest) { 
   const orden_id = req.nextUrl.searchParams.get("orden_id");
 
   try {
-    if (orden_id) {
+    if (orden_id == undefined) {
       let data = await retrieveOrdenesCompra()
-      .then((ordenes) => ordenes.map(async (orden) => {
+      .then((ordenes) => Promise.all(ordenes.map(async (orden) => {
         return {
           id: orden.id,
           forma_pago: orden.data.getFormaPago(),
           saldo: orden.data.getSaldo(),
           total: orden.data.getTotal(),
-          items: orden.data.getItems().map(async (item) => {
+          items: await Promise.all(orden.data.getItems().map(async (item) => {
             return {
               id: item.id,
               precio: item.precio,
               cantidad: item.cantidad,
               nombre: await retrieveArticulo(item.id).then((art) => art?.getNombre()),
             }
-          }),
+          })),
         }
-      }));
+      })));
       return NextResponse.json({ data })
     } else {
       let id = Number(orden_id);
       let data = await retrieveOrdenCompra(id)
-      .then((orden) => {
+      .then(async (orden) => {
         if (!orden) {
           throw Error(`Orden con id ${id} no encontrada`);
         }
@@ -37,19 +37,20 @@ export default async function GET(req: NextRequest) {
           forma_pago: orden.data.getFormaPago(),
           saldo: orden.data.getSaldo(),
           total: orden.data.getTotal(),
-          items: orden.data.getItems().map(async (item) => {
+          items: await Promise.all(orden.data.getItems().map(async (item) => {
             return {
               id: item.id,
               precio: item.precio,
               cantidad: item.cantidad,
               nombre: await retrieveArticulo(item.id).then((art) => art?.getNombre()),
             }
-          })
+          }))
         }
       })
       return NextResponse.json({ data })
     }
   } catch (error) {
+    console.log(`Error @ GET: ${error}`);
     return NextResponse.json({ error }, { status: 400 });
   }
 }
@@ -66,8 +67,8 @@ const forma_pago_map = new Map([
 
 export async function POST(req: NextRequest) {
   try {
-    const { items: raw_items, forma_pago: raw_forma_pago } = await req.json();
-    if (!raw_forma_pago) {
+    const {items: raw_items, forma_pago: raw_forma_pago} = await req.json();
+    if (raw_forma_pago == undefined) {
       throw new Error("Sin forma de pago");
     }
     let forma_pago = forma_pago_map.get(Number(raw_forma_pago));
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
       throw new Error("Forma de pago inválida");
     }
 
-    if (!raw_items || !Array.isArray(raw_items)) {
+    if (raw_items == undefined || !Array.isArray(raw_items)) {
       throw new Error("Sin items");
     }
     let items = raw_items.map((item, idx): ItemOrdenCompra => {
@@ -102,6 +103,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json({ data: out });
   } catch (error) {
+    console.log(`Error @ POST ${error}`);
     return NextResponse.json({ error }, { status: 400 });
   }
 }
@@ -125,6 +127,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ data: { id: orden_id, saldo } });
   } catch (error) {
+    console.log(`Error @ PUT ${error}`);
     return NextResponse.json({ error }, { status: 400 });
   }
 }

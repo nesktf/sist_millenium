@@ -50,7 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <h3 className="text-md font-semibold mb-2">Gestión de Compras</h3>
               <ul className="space-y-2 ml-2">
                 <li>
-                  <Link href="" className="hover:text-blue-400">
+                  <Link href="/ordencompra" className="hover:text-blue-400">
                     Registrar Orden de Compra
                   </Link>
                 </li>
