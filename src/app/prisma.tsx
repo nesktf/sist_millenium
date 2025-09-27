@@ -791,7 +791,11 @@ export async function retrieveOrdenesCompra(): Promise<Array<DBData<OrdenCompraD
           saldo: orden.saldo,
           total: orden.precio_total,
           items: orden.detalle.map((item) => {
-            return { id: item.id, precio: item.precio, cantidad: item.cantidad, }
+            return {
+              id: item.id_articulo,
+              precio: item.precio,
+              cantidad: item.cantidad,
+            }
           }),
         })
       };
@@ -818,7 +822,11 @@ export async function retrieveOrdenCompra(id: DBId): Promise<DBData<OrdenCompraD
           saldo: orden.saldo,
           total: orden.precio_total,
           items: orden.detalle.map((item) => {
-            return { id: item.id, precio: item.precio, cantidad: item.cantidad }
+            return {
+              id: item.id_articulo,
+              precio: item.precio,
+              cantidad: item.cantidad,
+            }
           }),
         }),
       }

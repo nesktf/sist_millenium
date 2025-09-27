@@ -25,6 +25,10 @@ interface OrdenPago {
   fecha: string;
   estado: 'PENDIENTE' | 'PAGADO' | 'CANCELADO';
   cantidad?: number;
+  forma_pago?: string;
+  referencia?: string;
+  responsable?: string;
+  observaciones?: string;
   comprobante?: ComprobanteProveedor;
 }
 
@@ -43,7 +47,12 @@ function RegistrarOrdenPagoModal({
   const [formData, setFormData] = useState({
     id_comprobante: '',
     fecha: new Date().toISOString().split('T')[0],
-    cantidad: ''
+    cantidad: '',
+    estado: 'PENDIENTE' as 'PENDIENTE' | 'PAGADO' | 'CANCELADO',
+    forma_pago: 'EFECTIVO',
+    referencia: '',
+    responsable: '',
+    observaciones: '',
   });
 
   // Calcular total del comprobante seleccionado
@@ -69,7 +78,7 @@ function RegistrarOrdenPagoModal({
       setFormData({ 
         ...formData, 
         [name]: value,
-        cantidad: total.toString()
+        cantidad: total ? total.toString() : ''
       });
     } else {
       setFormData({ ...formData, [name]: value });
@@ -82,11 +91,14 @@ function RegistrarOrdenPagoModal({
       alert("Por favor, selecciona un comprobante.");
       return;
     }
+    if (!formData.cantidad || Number(formData.cantidad) <= 0) {
+      alert('Ingrese un monto válido');
+      return;
+    }
     onSubmit({
       ...formData,
       id_comprobante: parseInt(formData.id_comprobante),
-      cantidad: formData.cantidad ? parseInt(formData.cantidad) : null,
-      estado: 'PENDIENTE'
+      cantidad: formData.cantidad ? Number(formData.cantidad) : null,
     });
   };
 
@@ -94,7 +106,12 @@ function RegistrarOrdenPagoModal({
     setFormData({
       id_comprobante: '',
       fecha: new Date().toISOString().split('T')[0],
-      cantidad: ''
+      cantidad: '',
+      estado: 'PENDIENTE',
+      forma_pago: 'EFECTIVO',
+      referencia: '',
+      responsable: '',
+      observaciones: '',
     });
   };
 
@@ -145,15 +162,17 @@ function RegistrarOrdenPagoModal({
 
         <div className="form-control w-full">
           <label className="label">
-            <span className="label-text">Monto</span>
+            <span className="label-text">Monto *</span>
           </label>
           <input
-            type="text"
+            type="number"
             name="cantidad"
-            value={formData.cantidad ? `${parseInt(formData.cantidad).toLocaleString()}` : ''}
-            placeholder="Se calculará automáticamente al seleccionar comprobante"
-            className="input input-bordered w-full bg-gray-50"
-            readOnly
+            min={0}
+            step="0.01"
+            value={formData.cantidad}
+            onChange={handleChange}
+            placeholder="Ingrese el monto a pagar"
+            className="input input-bordered w-full"
           />
         </div>
 
@@ -161,11 +180,76 @@ function RegistrarOrdenPagoModal({
           <label className="label">
             <span className="label-text">Estado</span>
           </label>
-          <input
-            type="text"
-            value="PENDIENTE"
-            className="input input-bordered w-full"
-            disabled
+          <select
+            name="estado"
+            value={formData.estado}
+            onChange={handleChange}
+            className="select select-bordered w-full"
+          >
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="PAGADO">Pagado</option>
+            <option value="CANCELADO">Cancelado</option>
+          </select>
+        </div>
+
+        <div className="form-control w-full">
+          <label className="label">
+            <span className="label-text">Forma de Pago</span>
+          </label>
+          <select
+            name="forma_pago"
+            value={formData.forma_pago}
+            onChange={handleChange}
+            className="select select-bordered w-full"
+          >
+            <option value="EFECTIVO">Efectivo</option>
+            <option value="TRANSFERENCIA">Transferencia</option>
+            <option value="CHEQUE">Cheque</option>
+            <option value="OTRO">Otro</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="form-control w-full">
+            <label className="label">
+              <span className="label-text">Referencia / Nº de operación</span>
+            </label>
+            <input
+              type="text"
+              name="referencia"
+              value={formData.referencia}
+              onChange={handleChange}
+              className="input input-bordered w-full"
+              placeholder="Ej: Nº de transferencia"
+            />
+          </div>
+
+          <div className="form-control w-full">
+            <label className="label">
+              <span className="label-text">Responsable</span>
+            </label>
+            <input
+              type="text"
+              name="responsable"
+              value={formData.responsable}
+              onChange={handleChange}
+              className="input input-bordered w-full"
+              placeholder="Quién registra el pago"
+            />
+          </div>
+        </div>
+
+        <div className="form-control">
+          <label className="label">
+            <span className="label-text">Observaciones</span>
+          </label>
+          <textarea
+            name="observaciones"
+            value={formData.observaciones}
+            onChange={handleChange}
+            className="textarea textarea-bordered"
+            rows={3}
+            placeholder="Notas adicionales del pago"
           />
         </div>
 
@@ -210,6 +294,9 @@ function OrdenesTable({
             <th>Proveedor</th>
             <th>Fecha Orden</th>
             <th>Estado</th>
+            <th>Forma Pago</th>
+            <th>Referencia</th>
+            <th>Responsable</th>
             <th>Cantidad</th>
             <th className="text-center">Acciones</th>
           </tr>
@@ -217,7 +304,7 @@ function OrdenesTable({
         <tbody>
           {ordenes.length === 0 ? (
             <tr>
-              <td colSpan={7} className="text-center p-4">
+              <td colSpan={10} className="text-center p-4">
                 No hay órdenes de pago registradas.
               </td>
             </tr>
@@ -234,6 +321,9 @@ function OrdenesTable({
                 <td>{orden.comprobante?.proveedor.nombre || '-'}</td>
                 <td>{new Date(orden.fecha).toLocaleDateString()}</td>
                 <td>{getEstadoBadge(orden.estado)}</td>
+                <td>{orden.forma_pago || '-'}</td>
+                <td>{orden.referencia || '-'}</td>
+                <td>{orden.responsable || '-'}</td>
                 <td className="text-right">
                   {orden.cantidad ? `$${orden.cantidad.toLocaleString()}` : '-'}
                 </td>
