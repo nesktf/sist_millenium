@@ -4,13 +4,12 @@ import { NextResponse } from "next/server";
 import {
   ArticuloDepositoData,
   DepositoData,
-  MovimientoStockData,
   registerDeposito,
-  registerMovimiento,
   retrieveDepositos,
-} from "@/app/prisma";
+} from "@/prisma/deposito";
 import { TipoMovimiento } from "@/generated/prisma";
-import prisma from "@/app/prisma";
+import { prisma } from "@/prisma/instance";
+import { registerMovimiento, MovimientoStockData } from "@/prisma/deposito_movimiento";
 
 //nuevo handler para GET (en consultar stock para q filtro me devuelva los depositos)
 export async function GET(req: Request) {

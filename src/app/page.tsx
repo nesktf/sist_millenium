@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import ProductTable from "./components/ProductTable";
-import ProductForm from "./components/ProductForm";
-import Modal from "./components/Modal";
+import ProductTable from "@/components/ProductTable";
+import ProductForm from "@/components/ProductForm";
+import Modal from "@/components/Modal";
 import Swal from "sweetalert2";
 
 export default function HomePage() {

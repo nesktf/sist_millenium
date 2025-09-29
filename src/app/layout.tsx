@@ -1,5 +1,5 @@
 // src/app/layout.tsx (Server Component)
-import Sidebar from "../app/components/sidebar";
+import Sidebar from "@/components/sidebar";
 import "./globals.css";
 import { ReactNode } from "react";
 

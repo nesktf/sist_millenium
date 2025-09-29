@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import MovimientosTable from "../components/MovimientosTable";
-import MovimientoForm from "../components/MovimientoForm";
-import Modal from "../components/Modal";
+import MovimientosTable from "@/components/MovimientosTable";
+import MovimientoForm from "@/components/MovimientoForm";
+import Modal from "@/components/Modal";
 import Link from "next/link";
-import { DepositoPostAction } from "../api/v1/deposito/route";
+import { DepositoPostAction } from "@/app/api/v1/deposito/route";
 
 
 export default function MovimientosPage() {

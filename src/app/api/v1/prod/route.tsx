@@ -5,24 +5,35 @@ import {
   registerArticulo,
   updateArticulo,
   deleteArticulo,
-} from "@/app/prisma";
+} from "@/prisma/articulo";
 
 // Devolver productos
 export async function GET(req: Request) {
-  return await retrieveArticulos().then((prods) => {
-    return NextResponse.json(
-      prods.map((prod) => {
-        let data: ArticuloData = prod.data;
-        return {
-          codigo: data.getCodigo(),
-          nombre: data.getNombre(),
-          id: prod.id,
-          marca: prod.marca,
-          categoria: prod.categoria,
-        };
-      })
-    );
-  });
+  let maybe_arts = await retrieveArticulos();
+
+  if (maybe_arts.hasError()) {
+    const error = maybe_arts.error();
+    console.log(`ERROR: api/v1/prod @ GET: ${error}`);
+    return NextResponse.json({ error }, { status: 500 })
+  }
+
+  const arts = maybe_arts.unwrap();
+  if (arts.length == 0) {
+    return NextResponse.json({ error: "Sin artículos" }, { status: 500 });
+  }
+
+  return NextResponse.json(
+    arts.map((prod) => {
+      let data: ArticuloData = prod.data;
+      return {
+        id: prod.id,
+        codigo: data.getCodigo(),
+        nombre: data.getNombre(),
+        marca: data.getMarca(),
+        categoria: data.getCategoria(),
+      };
+    })
+  )
 }
 
 // Agregar producto
@@ -67,6 +78,8 @@ export async function PUT(req: Request) {
       raw_data.id_categoria,
       raw_data.id_marca
     );
+
+    let update = updateArticulo(Number(id), data);
 
     return await updateArticulo({ id: Number(id), data })
       .then(() => {
