@@ -20,7 +20,9 @@ export default function MovimientosTable({
   movimientos: Movimiento[];
   isLoading: boolean;
 }) {
-  const [movimientoSeleccionado, setMovimientoSeleccionado] = useState<number | null>(null);
+  const [movimientoSeleccionado, setMovimientoSeleccionado] = useState<
+    number | null
+  >(null);
 
   // Agrupar movimientos por id_mov_stock para mostrar una fila por movimiento
   const movimientosAgrupados = movimientos.reduce((acc, mov) => {
@@ -31,22 +33,23 @@ export default function MovimientosTable({
         tipo: mov.tipo,
         comprobante: mov.comprobante,
         deposito: mov.deposito,
-        articulos: []
+        articulos: [],
       };
     }
     acc[mov.id_mov_stock].articulos.push({
       articulo: mov.articulo,
-      cantidad: mov.cantidad
+      cantidad: mov.cantidad,
     });
     return acc;
   }, {} as Record<number, any>);
 
-  const movimientosArray = Object.values(movimientosAgrupados)
-    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  const movimientosArray = Object.values(movimientosAgrupados).sort(
+    (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+  );
 
   const extractNumeroComprobante = (comprobante: string) => {
     // Extraer solo el número del comprobante (después del último guión)
-    const partes = comprobante.split(' - ');
+    const partes = comprobante.split(" - ");
     return partes[partes.length - 1] || comprobante;
   };
 
@@ -80,11 +83,15 @@ export default function MovimientosTable({
                 <tr key={`${mov.id_mov_stock}-${index}`}>
                   <td>{new Date(mov.fecha).toLocaleString("es-AR")}</td>
                   <td>
-                    <span className={`badge ${
-                      mov.tipo === 'INGRESO' ? 'badge-success' : 
-                      mov.tipo === 'EGRESO' ? 'badge-error' : 
-                      'badge-info'
-                    }`}>
+                    <span
+                      className={`badge ${
+                        mov.tipo === "INGRESO"
+                          ? "badge-success"
+                          : mov.tipo === "EGRESO"
+                          ? "badge-error"
+                          : "badge-info"
+                      }`}
+                    >
                       {mov.tipo}
                     </span>
                   </td>
@@ -92,7 +99,9 @@ export default function MovimientosTable({
                   <td>
                     <button
                       className="btn btn-sm btn-outline"
-                      onClick={() => setMovimientoSeleccionado(mov.id_mov_stock)}
+                      onClick={() =>
+                        setMovimientoSeleccionado(mov.id_mov_stock)
+                      }
                     >
                       Ver Detalle
                     </button>
