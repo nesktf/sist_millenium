@@ -9,7 +9,7 @@ import {
   registerMovimiento,
   retrieveDepositos,
 } from "@/app/prisma";
-import { TipoMovimiento } from "@/generated/prisma";
+import { NaturalezaMovimiento } from "@/generated/prisma";
 import prisma from "@/app/prisma";
 
 //nuevo handler para GET (en consultar stock para q filtro me devuelva los depositos)
@@ -66,7 +66,10 @@ async function getMovimientos(req: any) {
         : Number(req.timezoneOffset);
 
     if (typeof id_deposito !== "number") {
-      return NextResponse.json({ error: "Código de depósito inválido" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Código de depósito inválido" },
+        { status: 400 }
+      );
     }
 
     const whereClause: any = {
@@ -107,26 +110,30 @@ async function getMovimientos(req: any) {
           include: { artic_depos: { include: { articulo: true } } },
         },
       },
-      orderBy: { fecha_hora: 'desc' },
+      orderBy: { fecha_hora: "desc" },
     });
-    
+
     const resultadoAplanado = movimientos.flatMap((mov) =>
       mov.detalles_mov.map((detalle) => ({
-          id_mov_stock: mov.id,
-          fecha: mov.fecha_hora,
-          tipo: mov.tipo,
-          comprobante: `${mov.tipo_comprobante?.nombre || ''} - ${mov.num_comprobante || ''}`,
-          articulo: detalle.artic_depos.articulo.nombre,
-          cantidad: detalle.cantidad,
-          deposito: mov.deposito.direccion,
+        id_mov_stock: mov.id,
+        fecha: mov.fecha_hora,
+        tipo: mov.tipo,
+        comprobante: `${mov.tipo_comprobante?.nombre || ""} - ${
+          mov.num_comprobante || ""
+        }`,
+        articulo: detalle.artic_depos.articulo.nombre,
+        cantidad: detalle.cantidad,
+        deposito: mov.deposito.direccion,
       }))
     );
 
     return NextResponse.json(resultadoAplanado);
-
   } catch (error) {
     console.error("Error en getMovimientos:", error);
-    return NextResponse.json({ error: "Error al procesar la solicitud de movimientos" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al procesar la solicitud de movimientos" },
+      { status: 500 }
+    );
   }
 }
 
@@ -170,65 +177,70 @@ async function makeDeposito(req: any) {
 }
 
 async function makeMovimiento(req: any) {
-  let { id_dst, id_src, tipo, articulos, comprobante } = req;
-  if (typeof id_dst != "number") {
+  let { id_dst, id_src, tipoOperacionId, articulos, comprobante } = req;
+
+  if (typeof id_dst !== "number") {
     return NextResponse.json({ error: "Deposito invalido" }, { status: 400 });
   }
-  if (
-    tipo != TipoMovimiento.INGRESO &&
-    tipo != TipoMovimiento.TRANSFERENCIA &&
-    tipo != TipoMovimiento.EGRESO
-  ) {
+
+  if (typeof tipoOperacionId !== "number") {
     return NextResponse.json(
-      { error: "Tipo de movimiento invalido" },
+      { error: "Tipo de operacion invalido" },
       { status: 400 }
     );
   }
-  if (typeof comprobante != "string") {
+
+  if (typeof comprobante !== "string") {
     return NextResponse.json(
       { error: "Tipo de comprobante invalido" },
       { status: 400 }
     );
   }
-  if (tipo == TipoMovimiento.TRANSFERENCIA && typeof id_src != "number") {
-    return NextResponse.json(
-      { error: "Deposito fuente invalido" },
-      { status: 400 }
-    );
-  }
+
   if (!Array.isArray(articulos)) {
     return NextResponse.json({ error: "Articulos invalidos" }, { status: 400 });
   }
+
+  // Buscar el tipoOperacion en la BD por ID
+  const tipoOperacion = await prisma.tipoOperacion.findUnique({
+    where: { id: tipoOperacionId },
+  });
+
+  if (!tipoOperacion) {
+    return NextResponse.json(
+      { error: `Tipo de operación id=${tipoOperacionId} no existe` },
+      { status: 400 }
+    );
+  }
+
+  // Parsear artículos
   let articulos_parsed = articulos.map((articulo) => {
     let { id, stock } = articulo;
-    if (typeof id != "number") {
-      throw new Error("ID articulo invalido");
-    }
-    if (typeof stock != "number") {
-      throw new Error("ID stock invalido");
-    }
+    if (typeof id !== "number") throw new Error("ID articulo invalido");
+    if (typeof stock !== "number") throw new Error("Stock invalido");
     return new ArticuloDepositoData(id, stock);
   });
 
-  var parsed_data = (() => {
-    if (tipo == TipoMovimiento.TRANSFERENCIA) {
-      return MovimientoStockData.fromTransfer(
-        id_dst,
-        id_src,
-        comprobante,
-        articulos_parsed
-      );
-    } else {
-      return new MovimientoStockData(
-        id_dst,
-        tipo,
-        articulos_parsed,
-        comprobante
+  // Crear movimiento
+  const parsed_data = new MovimientoStockData(
+    id_dst,
+    articulos_parsed,
+    comprobante
+  );
+
+  try {
+    let result = await registerMovimiento(parsed_data, tipoOperacion.nombre);
+    return NextResponse.json(result);
+  } catch (err: any) {
+    if (err.code === "P2002") {
+      return NextResponse.json(
+        { error: "Comprobante duplicado" },
+        { status: 400 }
       );
     }
-  })();
-  let result = await registerMovimiento(parsed_data);
-  return NextResponse.json(result);
+    console.error("Error al registrar movimiento:", err);
+    return NextResponse.json({ error: "Error inesperado" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

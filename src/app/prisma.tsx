@@ -3,7 +3,7 @@ import {
   EstadoProveedor,
   FormaDePago,
   PrismaClient,
-  TipoMovimiento,
+  NaturalezaMovimiento,
 } from "../generated/prisma";
 
 const prisma = new PrismaClient();
@@ -63,10 +63,19 @@ export async function registerArticulo(articulo: ArticuloData): Promise<DBId> {
     });
 }
 
-export async function retrieveArticulo(id: DBId): Promise<ArticuloData|null> {
+export async function retrieveArticulo(id: DBId): Promise<ArticuloData | null> {
   try {
-    return await prisma.articulo.findUniqueOrThrow({ where: { id }})
-    .then((art) => new ArticuloData(art.codigo, art.nombre, art.id_categoria, art.id_marca));
+    return await prisma.articulo
+      .findUniqueOrThrow({ where: { id } })
+      .then(
+        (art) =>
+          new ArticuloData(
+            art.codigo,
+            art.nombre,
+            art.id_categoria,
+            art.id_marca
+          )
+      );
   } catch (error) {
     console.log(`Error @ retrieveArticulo: ${error}`);
     return null;
@@ -182,17 +191,19 @@ export async function findDeposito(id: DBId): Promise<DepositoData> {
 }
 
 export class ArticuloDepositoData {
-  private articulo: DBId;
+  private id: DBId;
   private stock: number;
 
-  constructor(articulo: DBId, stock: number) {
-    this.articulo = articulo;
-    this.stock = Math.round(stock);
+  constructor(id: DBId, stock: number) {
+    if (stock <= 0) throw new Error("Stock inválido");
+    this.id = id;
+    this.stock = stock;
   }
 
   getId(): DBId {
-    return this.articulo;
+    return this.id;
   }
+
   getStock(): number {
     return this.stock;
   }
@@ -200,30 +211,21 @@ export class ArticuloDepositoData {
 
 export class MovimientoStockData {
   private id_dst: DBId;
-  private tipo: TipoMovimiento;
   private articulos: Array<ArticuloDepositoData>;
   private id_src?: DBId;
   private comprobante?: string;
 
   constructor(
     id_dst: DBId,
-    tipo: TipoMovimiento,
     articulos: Array<ArticuloDepositoData>,
     comprobante?: string | null,
     id_src?: DBId | null
   ) {
-    if (articulos.length == 0) {
-      throw new Error("Invalid array size");
-    }
+    if (articulos.length === 0) throw new Error("Invalid array size");
     this.id_dst = id_dst;
-    this.tipo = tipo;
     this.articulos = articulos;
-    if (id_src) {
-      this.id_src = id_src;
-    }
-    if (comprobante) {
-      this.comprobante = comprobante;
-    }
+    if (id_src) this.id_src = id_src;
+    if (comprobante) this.comprobante = comprobante;
   }
 
   public static fromTransfer(
@@ -232,32 +234,27 @@ export class MovimientoStockData {
     comprobante: string,
     articulos: Array<ArticuloDepositoData>
   ): MovimientoStockData {
-    return new MovimientoStockData(
-      to,
-      TipoMovimiento.TRANSFERENCIA,
-      articulos,
-      comprobante,
-      from
-    );
+    return new MovimientoStockData(to, articulos, comprobante, from);
   }
 
   getDeposito(): DBId {
     return this.id_dst;
   }
-  getTipo(): TipoMovimiento {
-    return this.tipo;
-  }
+
   getArticulos(): Array<ArticuloDepositoData> {
     return this.articulos;
   }
-  hasComprobante(): boolean {
-    return this.hasComprobante != null;
-  }
+
   getComprobante(): string | null {
-    return this.comprobante ? this.comprobante : null;
+    return this.comprobante ?? null;
   }
+
   getFuente(): DBId | null {
-    return this.id_src ? this.id_src : null;
+    return this.id_src ?? null;
+  }
+
+  hasFuente(): boolean {
+    return this.id_src != null;
   }
 }
 
@@ -306,143 +303,135 @@ async function updateArticDeposStock(
 }
 
 export async function registerMovimiento(
-  movimiento: MovimientoStockData
+  movimiento: MovimientoStockData,
+  tipoOperacionNombre: string
 ): Promise<RegistroMov> {
-  let tipo = movimiento.getTipo();
-  let articulos = movimiento.getArticulos();
-  // TODO: Chequear capacidad del depósito
-  // let total_things = articulos.reduce((prev, next) => {
-  //   return next.getStock();
-  // }, 0);
+  // 1. Buscar tipoOperacion por nombre
+  const tipoOperacion = await prisma.tipoOperacion.findUnique({
+    where: { nombre: tipoOperacionNombre },
+  });
+  if (!tipoOperacion) throw new Error("TipoOperacion no encontrado");
+
+  const naturaleza = tipoOperacion.naturaleza; // INGRESO | EGRESO
+
+  const updateArticDeposStock = async (
+    artic: { id: DBId; stock: number },
+    deposito: DBId
+  ): Promise<DBId> => {
+    let entry = await prisma.articDepos.findFirst({
+      where: { id_deposito: deposito, id_articulo: artic.id },
+    });
+
+    if (!entry) {
+      if (artic.stock < 0) throw new Error("Stock inválido");
+      entry = await prisma.articDepos.create({
+        data: {
+          id_deposito: deposito,
+          id_articulo: artic.id,
+          stock: artic.stock,
+        },
+      });
+      return entry.id;
+    } else {
+      const new_stock = entry.stock + artic.stock;
+      if (new_stock < 0) throw new Error("Stock inválido");
+      await prisma.articDepos.update({
+        where: { id: entry.id },
+        data: { stock: new_stock },
+      });
+      return entry.id;
+    }
+  };
 
   const add_artic_depos = async (deposito: DBId, id_mov: DBId) => {
     return await Promise.all(
-      articulos.map(async (articulo) => {
-        assert(articulo.getStock() > 0, "Stock inválido");
-        let data = { id: articulo.getId(), stock: articulo.getStock() };
-        return await updateArticDeposStock(data, deposito);
+      movimiento.getArticulos().map(async (articulo) => {
+        const data = { id: articulo.getId(), stock: articulo.getStock() };
+        const id_artic_depos = await updateArticDeposStock(data, deposito);
+        return {
+          id_movimiento: id_mov,
+          id_artic_depos,
+          cantidad: articulo.getStock(),
+        };
       })
-    ).then((articulos_depos) => {
-      return articulos_depos.map(
-        (id_artic_depos: number | null, idx: number) => {
-          // Solo pueden haberse actualizado o creado entradas
-          assert(
-            id_artic_depos != null,
-            "Ingreso no puede eliminar articulos_depos"
-          );
-          return {
-            id_movimiento: id_mov,
-            id_artic_depos: id_artic_depos,
-            cantidad: articulos[idx].getStock(),
-          };
-        }
-      );
-    });
-  };
-  const subs_artic_depos = async (deposito: DBId, id_mov: DBId) => {
-    let detalles = await Promise.all(
-      articulos.map(async (articulo) => {
-        let count = -articulo.getStock();
-        assert(count < 0, "Stock inválido");
-        let data = { id: articulo.getId(), stock: count };
-        return await updateArticDeposStock(data, deposito);
-      })
-    ).then((articulos_depos) => {
-      return articulos_depos.map(
-        (id_artic_depos: number | null, idx: number) => {
-          if (id_artic_depos == null) {
-            return null;
-          }
-          // FIXME: Qué detalle crear cuando un artículo en depósito es eliminado?
-          return {
-            id_movimiento: id_mov,
-            id_artic_depos: id_artic_depos,
-            cantidad: -articulos[idx].getStock(),
-          };
-        }
-      );
-    });
-    return detalles.filter((detalle) => {
-      return detalle != null;
-    });
+    );
   };
 
-  // 1. Crear entrada de movimiento de depósito
-  let dst_deposito = movimiento.getDeposito();
-  let date = new Date();
-  let dst_entry = await prisma.movimientoStock.create({
+  const subs_artic_depos = async (deposito: DBId, id_mov: DBId) => {
+    return (
+      await Promise.all(
+        movimiento.getArticulos().map(async (articulo) => {
+          const count = -articulo.getStock();
+          const data = { id: articulo.getId(), stock: count };
+          const id_artic_depos = await updateArticDeposStock(data, deposito);
+          return {
+            id_movimiento: id_mov,
+            id_artic_depos,
+            cantidad: count,
+          };
+        })
+      )
+    ).filter((d) => d != null);
+  };
+
+  const dst_deposito = movimiento.getDeposito();
+  const date = new Date();
+
+  // Crear movimiento destino
+  const dst_entry = await prisma.movimientoStock.create({
     data: {
       fecha_hora: date,
-      tipo: tipo,
       id_deposito: dst_deposito,
+      id_tipo_operacion: tipoOperacion.id,
       num_comprobante: movimiento.getComprobante(),
     },
   });
-  var src_entry_out: { id: DBId; date: Date } | null = null;
+
+  let src_entry_out: { id: DBId; date: Date } | null = null;
+
   try {
-    if (tipo == TipoMovimiento.INGRESO) {
-      // 2. Crear o actualizar artículos en depósitos con más stock
-      let detalles = await add_artic_depos(dst_deposito, dst_entry.id);
-
-      // 3. Crear detalles de movimientos con los artículos de depósito modificados/creados
+    if (naturaleza === "INGRESO") {
+      const detalles = await add_artic_depos(dst_deposito, dst_entry.id);
       await Promise.all(
-        detalles.map(async (detalle) => {
-          await prisma.detalleMovimiento.create({ data: detalle });
-        })
+        detalles.map((d) => prisma.detalleMovimiento.create({ data: d }))
       );
-    } else if (tipo == TipoMovimiento.EGRESO) {
-      // 2. Actualizar artículos en depósitos con menos stock
-      let detalles = await subs_artic_depos(dst_deposito, dst_entry.id);
-
-      // 3. Crear detalles de movimientos con los artículos de depósito modificados
+    } else if (naturaleza === "EGRESO") {
+      const detalles = await subs_artic_depos(dst_deposito, dst_entry.id);
       await Promise.all(
-        detalles.map(async (detalle) => {
-          await prisma.detalleMovimiento.create({ data: detalle });
-        })
+        detalles.map((d) => prisma.detalleMovimiento.create({ data: d }))
       );
-    } else if (tipo == TipoMovimiento.TRANSFERENCIA) {
-      // 2. Crear otro movimiento para el depósito fuente
-      let src_deposito = movimiento.getFuente();
-      assert(src_deposito != null);
-      let src_entry = await prisma.movimientoStock.create({
-        data: {
-          fecha_hora: date,
-          tipo: tipo,
-          id_deposito: src_deposito,
-          num_comprobante: movimiento.getComprobante() + "-SRC",
-        },
-      });
-      src_entry_out = { id: src_entry.id, date: date };
+    } else {
+      // Si quieres transferencias explícitas
+      if (movimiento.hasFuente()) {
+        const src_deposito = movimiento.getFuente()!;
+        // Crear movimiento fuente
+        const src_entry = await prisma.movimientoStock.create({
+          data: {
+            fecha_hora: date,
+            id_deposito: src_deposito,
+            id_tipo_operacion: tipoOperacion.id,
+            num_comprobante: movimiento.getComprobante() + "-SRC",
+          },
+        });
+        src_entry_out = { id: src_entry.id, date };
+        const src_detalles = await subs_artic_depos(src_deposito, src_entry.id);
+        await Promise.all(
+          src_detalles.map((d) => prisma.detalleMovimiento.create({ data: d }))
+        );
 
-      // 3. Actualizar artículos en el depósito fuente
-      let src_detalles = await subs_artic_depos(src_deposito, src_entry.id);
-      console.log(src_detalles);
-
-      // 4. Crear o actualizar artículos en el depósito destino
-      let dst_detalles = await add_artic_depos(dst_deposito, dst_entry.id);
-      console.log(dst_detalles);
-
-      // 5. Cargar todos los detalles
-      await Promise.all(
-        src_detalles.map(async (detalle) => {
-          await prisma.detalleMovimiento.create({ data: detalle });
-        })
-      );
-      await Promise.all(
-        dst_detalles.map(async (detalle) => {
-          await prisma.detalleMovimiento.create({ data: detalle });
-        })
-      );
+        const dst_detalles = await add_artic_depos(dst_deposito, dst_entry.id);
+        await Promise.all(
+          dst_detalles.map((d) => prisma.detalleMovimiento.create({ data: d }))
+        );
+      } else {
+        throw new Error("Naturaleza desconocida y sin fuente");
+      }
     }
   } catch (err: any) {
-    if (src_entry_out != null) {
-      await prisma.movimientoStock.delete({
-        where: { id: src_entry_out.id },
-      });
+    if (src_entry_out) {
+      await prisma.movimientoStock.delete({ where: { id: src_entry_out.id } });
     }
-    await prisma.movimientoStock.delete({
-      where: { id: dst_entry.id },
-    });
+    await prisma.movimientoStock.delete({ where: { id: dst_entry.id } });
     throw err;
   }
 
@@ -718,7 +707,7 @@ export type ItemOrdenCompra = {
   id: DBId;
   precio: number;
   cantidad: number;
-}
+};
 
 export class OrdenCompraData {
   forma_pago: FormaDePago;
@@ -726,32 +715,59 @@ export class OrdenCompraData {
   total: number;
   items: Array<ItemOrdenCompra>;
 
-  private constructor(forma_pago: FormaDePago, saldo: number, total: number,
-                      items: Array<ItemOrdenCompra>)
-  {
+  private constructor(
+    forma_pago: FormaDePago,
+    saldo: number,
+    total: number,
+    items: Array<ItemOrdenCompra>
+  ) {
     this.forma_pago = forma_pago;
     this.saldo = saldo;
     this.total = total;
     this.items = items;
   }
 
-  getFormaPago(): FormaDePago { return this.forma_pago; }
-  getTotal(): number { return this.total; }
-  getSaldo(): number { return this.saldo; }
-  getItems(): Array<ItemOrdenCompra> { return this.items; }
+  getFormaPago(): FormaDePago {
+    return this.forma_pago;
+  }
+  getTotal(): number {
+    return this.total;
+  }
+  getSaldo(): number {
+    return this.saldo;
+  }
+  getItems(): Array<ItemOrdenCompra> {
+    return this.items;
+  }
 
-  static fromItems(forma_pago: FormaDePago, items: Array<ItemOrdenCompra>): OrdenCompraData {
-    let total = items.reduce((total, curr) => total + curr.precio*curr.cantidad, 0);
+  static fromItems(
+    forma_pago: FormaDePago,
+    items: Array<ItemOrdenCompra>
+  ): OrdenCompraData {
+    let total = items.reduce(
+      (total, curr) => total + curr.precio * curr.cantidad,
+      0
+    );
     return new OrdenCompraData(forma_pago, total, total, items);
   }
   static fromDBEntry({
-    forma_pago, saldo, total, items
-  }: { forma_pago: FormaDePago, saldo: number, total: number, items: Array<ItemOrdenCompra>}) {
+    forma_pago,
+    saldo,
+    total,
+    items,
+  }: {
+    forma_pago: FormaDePago;
+    saldo: number;
+    total: number;
+    items: Array<ItemOrdenCompra>;
+  }) {
     return new OrdenCompraData(forma_pago, saldo, total, items);
   }
-};
+}
 
-export async function registerOrdenCompra(orden: OrdenCompraData): Promise<DBId|null> {
+export async function registerOrdenCompra(
+  orden: OrdenCompraData
+): Promise<DBId | null> {
   try {
     const trans_res = await prisma.$transaction(async (tx) => {
       const orden_entry = await tx.ordenCompra.create({
@@ -759,7 +775,8 @@ export async function registerOrdenCompra(orden: OrdenCompraData): Promise<DBId|
           precio_total: orden.getTotal(),
           forma_pago: orden.getFormaPago(),
           saldo: orden.getTotal(),
-        } });
+        },
+      });
       await tx.detalleOrdenCompra.createMany({
         data: orden.getItems().map((item) => {
           return {
@@ -767,7 +784,7 @@ export async function registerOrdenCompra(orden: OrdenCompraData): Promise<DBId|
             id_articulo: item.id,
             precio: item.precio,
             cantidad: item.cantidad,
-          }
+          };
         }),
       });
       return orden_entry;
@@ -779,61 +796,79 @@ export async function registerOrdenCompra(orden: OrdenCompraData): Promise<DBId|
   }
 }
 
-
-export async function retrieveOrdenesCompra(): Promise<Array<DBData<OrdenCompraData>>> {
+export async function retrieveOrdenesCompra(): Promise<
+  Array<DBData<OrdenCompraData>>
+> {
   try {
-    return await prisma.ordenCompra.findMany({ include: { detalle: true }})
-    .then((ordenes) => ordenes.map((orden) => {
-      return {
-        id: orden.id,
-        data: OrdenCompraData.fromDBEntry({
-          forma_pago: orden.forma_pago,
-          saldo: orden.saldo,
-          total: orden.precio_total,
-          items: orden.detalle.map((item) => {
-            return { id: item.id, precio: item.precio, cantidad: item.cantidad, }
-          }),
+    return await prisma.ordenCompra
+      .findMany({ include: { detalle: true } })
+      .then((ordenes) =>
+        ordenes.map((orden) => {
+          return {
+            id: orden.id,
+            data: OrdenCompraData.fromDBEntry({
+              forma_pago: orden.forma_pago,
+              saldo: orden.saldo,
+              total: orden.precio_total,
+              items: orden.detalle.map((item) => {
+                return {
+                  id: item.id,
+                  precio: item.precio,
+                  cantidad: item.cantidad,
+                };
+              }),
+            }),
+          };
         })
-      };
-    }))
+      );
   } catch (err) {
     console.log(`Error @ retrieveOrdenesCompra: ${err}`);
-    return []
+    return [];
   }
 }
 
-export async function retrieveOrdenCompra(id: DBId): Promise<DBData<OrdenCompraData>|null> {
+export async function retrieveOrdenCompra(
+  id: DBId
+): Promise<DBData<OrdenCompraData> | null> {
   try {
-    return await prisma.ordenCompra.findUniqueOrThrow({
-      where: { id },
-      include: {
-        detalle: true
-      }
-    })
-    .then((orden) => {
-      return {
-        id: orden.id,
-        data: OrdenCompraData.fromDBEntry({
-          forma_pago: orden.forma_pago,
-          saldo: orden.saldo,
-          total: orden.precio_total,
-          items: orden.detalle.map((item) => {
-            return { id: item.id, precio: item.precio, cantidad: item.cantidad }
+    return await prisma.ordenCompra
+      .findUniqueOrThrow({
+        where: { id },
+        include: {
+          detalle: true,
+        },
+      })
+      .then((orden) => {
+        return {
+          id: orden.id,
+          data: OrdenCompraData.fromDBEntry({
+            forma_pago: orden.forma_pago,
+            saldo: orden.saldo,
+            total: orden.precio_total,
+            items: orden.detalle.map((item) => {
+              return {
+                id: item.id,
+                precio: item.precio,
+                cantidad: item.cantidad,
+              };
+            }),
           }),
-        }),
-      }
-    });
+        };
+      });
   } catch (err) {
     console.log(`Error @ retrieveOrdenCompra: ${err}`);
     return null;
   }
 }
 
-export async function updateOrdenCompraSaldo(id: DBId, saldo: number): Promise<boolean> {
+export async function updateOrdenCompraSaldo(
+  id: DBId,
+  saldo: number
+): Promise<boolean> {
   try {
     await prisma.ordenCompra.update({
       where: { id },
-      data: { saldo }
+      data: { saldo },
     });
     return true;
   } catch (err) {

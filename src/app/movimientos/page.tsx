@@ -100,6 +100,7 @@ export default function MovimientosPage() {
           id_mov_stock: mov.id_mov_stock,
           fecha: mov.fecha,
           tipo: mov.tipoOperacion,
+          naturaleza: mov.naturalezaOperacion, // 👈 Guardamos la naturaleza
           comprobante: mov.comprobante,
           articulo: mov.articulo,
           cantidad: mov.cantidad,
@@ -129,7 +130,7 @@ export default function MovimientosPage() {
       if (selectedTipoMovimiento !== "all") {
         setMovimientos(
           flattenedMovs.filter(
-            (mov: any) => mov.tipo === selectedTipoMovimiento
+            (mov: any) => mov.naturaleza === selectedTipoMovimiento
           )
         );
       } else {
@@ -199,26 +200,6 @@ export default function MovimientosPage() {
             </select>
           </div>
 
-          {/*NUEVO FILTRO DE ARTÍCULO*/}
-          <div className="form-control">
-            <label htmlFor="articulo-select" className="label pb-1">
-              <span className="label-text font-medium">Artículo:</span>
-            </label>
-            <select
-              id="articulo-select"
-              className="select select-bordered select-sm w-full"
-              value={selectedArticulo}
-              onChange={(e) => setSelectedArticulo(e.target.value)}
-            >
-              <option value="all">Todos los Artículos</option>
-              {articulos.map((art: any) => (
-                <option key={art.id} value={art.id}>
-                  {art.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Selector de tipo de movimiento */}
           <div className="form-control">
             <label htmlFor="tipo-select" className="label pb-1">
@@ -239,20 +220,6 @@ export default function MovimientosPage() {
                 </option>
               ))}
             </select>
-          </div>
-
-          {/* Selector de fecha */}
-          <div className="form-control">
-            <label htmlFor="fecha" className="label pb-1">
-              <span className="label-text font-medium">Fecha:</span>
-            </label>
-            <input
-              id="fecha"
-              type="date"
-              className="input input-bordered input-sm w-full"
-              value={selectedFecha}
-              onChange={(e) => setSelectedFecha(e.target.value)}
-            />
           </div>
         </div>
       </div>

@@ -42,6 +42,7 @@ export default function MovimientoForm({
   // Manejo de artículos
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<string>("");
   const [cantidadSeleccionada, setCantidadSeleccionada] = useState<string>("");
+
   const [articulosAgregados, setArticulosAgregados] = useState<
     ArticuloSeleccionado[]
   >([]);
@@ -179,7 +180,7 @@ export default function MovimientoForm({
 
     const form_data = {
       action: DepositoPostAction.new_movimiento,
-      tipo,
+      tipoOperacionId: Number(tipoOperacionSeleccionado),
       id_dst: Number(deposito),
       comprobante: comprobante_str,
       articulos: articulosAgregados.map((art) => ({
@@ -188,6 +189,7 @@ export default function MovimientoForm({
       })),
       fecha,
     };
+    console.log(form_data); // Añadir esto para revisar la estructura
 
     setSaving(true);
     try {
@@ -208,9 +210,26 @@ export default function MovimientoForm({
     }
   }
 
+  // Asumimos que `deposito` ya tiene un valor
+  const depositoSeleccionado = deps.find(
+    (d) => d.id_deposito.toString() === deposito
+  );
+
   return (
     <form onSubmit={onSubmit} className="space-y-4 min-w-[32rem]">
-      {/* Tipo */}
+      {/* Cabecera con depósito elegido */}
+      {depositoSeleccionado && (
+        <div className="bg-gray-100 p-4 rounded-lg flex justify-between">
+          <div className="flex items-center">
+            <span className="font-medium text-lg">Depósito seleccionado:</span>
+            <span className="ml-2 text-gray-800">
+              {depositoSeleccionado.direccion}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Tipo de Operación */}
       <div className="form-control">
         <label className="label">
           <span className="label-text font-medium">Tipo de Operación</span>
@@ -234,31 +253,6 @@ export default function MovimientoForm({
           <span className="label-text-alt text-error">
             {errors.tipoOperacion}
           </span>
-        )}
-      </div>
-
-      {/* Depósito destino */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">Depósito</span>
-        </label>
-        <select
-          className="select select-bordered w-full"
-          value={deposito}
-          onChange={(e) => setDeposito(e.target.value)}
-          disabled={loading || deps.length === 0}
-        >
-          <option value="" disabled>
-            {loading ? "Cargando..." : "Selecciona"}
-          </option>
-          {deps.map((d) => (
-            <option key={d.id_deposito} value={d.id_deposito}>
-              {d.direccion}
-            </option>
-          ))}
-        </select>
-        {errors.deposito && (
-          <span className="label-text-alt text-error">{errors.deposito}</span>
         )}
       </div>
 
