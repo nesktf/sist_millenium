@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import MovimientosTable from "../components/MovimientosTable";
-import MovimientoForm from "../components/MovimientoForm";
 import Modal from "../components/Modal";
 import Link from "next/link";
 import { DepositoPostAction } from "../api/v1/deposito/route";
+import MovimientoForm, { Deposito } from "../components/MovimientoForm";
 
 export default function MovimientosPage() {
+  const [selectedDepositoAdd, setSelectedDepositoAdd] = useState<string>("");
+  const [depositosAdd, setDepositosAdd] = useState<Deposito[]>([]);
+
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [depositos, setDepositos] = useState<any[]>([]);
   const [articulos, setArticulos] = useState<any[]>([]);
@@ -149,6 +152,20 @@ export default function MovimientosPage() {
 
       <div className="mb-4">
         <div className="flex gap-4 mb-3">
+          <select
+            className="select select-bordered select-sm"
+            value={selectedDepositoAdd}
+            onChange={(e) => setSelectedDepositoAdd(e.target.value)}
+          >
+            <option value="" disabled>
+              Selecciona un depósito
+            </option>
+            {depositos.map((d) => (
+              <option key={d.id_deposito} value={d.id_deposito}>
+                {d.direccion}
+              </option>
+            ))}
+          </select>
           <button
             onClick={() => setShowForm(true)}
             className="btn btn-primary btn-sm"
@@ -251,6 +268,7 @@ export default function MovimientosPage() {
               fetchMovimientos();
               setShowForm(false);
             }}
+            initialDeposito={selectedDepositoAdd}
           />
         </Modal>
       )}

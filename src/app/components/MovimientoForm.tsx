@@ -9,14 +9,21 @@ const prefix_map = new Map([
   [NaturalezaMovimiento.EGRESO.toString(), "EGR-"],
 ]);
 
-type Deposito = { id_deposito: number; direccion: string };
+export type Deposito = { id_deposito: number; direccion: string };
 type Articulo = { codigo: string; id: number; nombre: string };
 type ArticuloSeleccionado = { id: number; nombre: string; cantidad: number };
+type TipoOperacion = {
+  id: number;
+  nombre: string;
+  naturaleza: "INGRESO" | "EGRESO";
+};
 
 export default function MovimientoForm({
   onSuccess,
+  initialDeposito,
 }: {
   onSuccess: () => void;
+  initialDeposito?: string;
 }) {
   const [tipo, setTipo] = useState<NaturalezaMovimiento>(
     NaturalezaMovimiento.INGRESO
@@ -24,8 +31,13 @@ export default function MovimientoForm({
   const [fecha, setFecha] = useState<string>(() =>
     new Date().toISOString().slice(0, 10)
   );
-  const [deposito, setDeposito] = useState<string>("");
+  const [deposito, setDeposito] = useState<string>(initialDeposito || "");
   const [comprobante, setComprobante] = useState<string>("");
+
+  const [tiposOperacion, setTiposOperacion] = useState<TipoOperacion[]>([]);
+  const [tipoOperacionSeleccionado, setTipoOperacionSeleccionado] = useState<
+    number | ""
+  >("");
 
   // Manejo de artículos
   const [articuloSeleccionado, setArticuloSeleccionado] = useState<string>("");
@@ -43,18 +55,56 @@ export default function MovimientoForm({
   useEffect(() => {
     (async () => {
       try {
-        const [rDep, rArt] = await Promise.all([
+        const [rDep, rArt, rTipoOp] = await Promise.all([
           fetch("/api/v1/deposito", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: 0 }),
           }),
           fetch("/api/v1/prod"),
+          fetch("/api/v1/tipo_operacion"), // endpoint que devuelve los tipos de operación
         ]);
-        const depData = await rDep.json();
-        const artData = await rArt.json();
-        setDeps(depData.depositos ?? []);
-        setArts(artData ?? []);
+
+        // Depósitos
+        let depData: any[] = [];
+        if (rDep.ok) {
+          try {
+            const json = await rDep.json();
+            depData = json.depositos ?? [];
+          } catch {
+            console.error("No se pudo parsear JSON de depósitos");
+          }
+        } else {
+          console.error("Error fetch depósitos", rDep.status);
+        }
+
+        // Artículos
+        let artData: any[] = [];
+        if (rArt.ok) {
+          try {
+            artData = await rArt.json();
+          } catch {
+            console.error("No se pudo parsear JSON de artículos");
+          }
+        } else {
+          console.error("Error fetch artículos", rArt.status);
+        }
+
+        // Tipos de operación
+        let tipoOpData: TipoOperacion[] = [];
+        if (rTipoOp.ok) {
+          try {
+            tipoOpData = await rTipoOp.json();
+          } catch {
+            console.error("No se pudo parsear JSON de tipos de operación");
+          }
+        } else {
+          console.error("Error fetch tipos de operación", rTipoOp.status);
+        }
+
+        setDeps(depData);
+        setArts(artData);
+        setTiposOperacion(tipoOpData);
       } finally {
         setLoading(false);
       }
@@ -162,25 +212,29 @@ export default function MovimientoForm({
     <form onSubmit={onSubmit} className="space-y-4 min-w-[32rem]">
       {/* Tipo */}
       <div className="form-control">
-        <span className="label-text font-medium mb-2">Tipo de Movimiento</span>
-        <div className="join">
-          <input
-            type="radio"
-            name="tipo"
-            className="btn join-item"
-            aria-label="Ingreso"
-            checked={tipo === NaturalezaMovimiento.INGRESO}
-            onChange={() => setTipo(NaturalezaMovimiento.INGRESO)}
-          />
-          <input
-            type="radio"
-            name="tipo"
-            className="btn join-item"
-            aria-label="Egreso"
-            checked={tipo === NaturalezaMovimiento.EGRESO}
-            onChange={() => setTipo(NaturalezaMovimiento.EGRESO)}
-          />
-        </div>
+        <label className="label">
+          <span className="label-text font-medium">Tipo de Operación</span>
+        </label>
+        <select
+          className="select select-bordered w-full"
+          value={tipoOperacionSeleccionado}
+          onChange={(e) => setTipoOperacionSeleccionado(Number(e.target.value))}
+          disabled={loading || tiposOperacion.length === 0}
+        >
+          <option value="" disabled>
+            {loading ? "Cargando..." : "Selecciona"}
+          </option>
+          {tiposOperacion.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.nombre} ({t.naturaleza})
+            </option>
+          ))}
+        </select>
+        {errors.tipoOperacion && (
+          <span className="label-text-alt text-error">
+            {errors.tipoOperacion}
+          </span>
+        )}
       </div>
 
       {/* Depósito destino */}
