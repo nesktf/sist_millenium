@@ -482,8 +482,9 @@ export async function retrieveMovimientos(
   );
   let parsed_things = movs.map((mov, idx_mov: number) => {
     return {
+      id: mov.id, // 👈 agregar esto
       fecha: mov.fecha_hora,
-      tipo: mov.tipo,
+      tipo: mov.id_tipo_operacion,
       comprobante: mov.num_comprobante,
       articulos: mov_detalles[idx_mov].map((detalle, idx_det: number) => {
         let articulo = mov_articulos[idx_mov][idx_det];
