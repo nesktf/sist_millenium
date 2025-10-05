@@ -1,5 +1,3 @@
-// app/api/v1/movimientos/[id]/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/prisma";
 

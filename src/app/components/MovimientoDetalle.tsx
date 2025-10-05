@@ -42,7 +42,7 @@ export default function MovimientoDetalle({
     async function fetchMovimientoDetalle() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/v1/movimientos2/${movimientoId}`);
+        const response = await fetch(`/api/v1/movimientos/${movimientoId}`);
 
         if (!response.ok) {
           throw new Error("Error al cargar el detalle del movimiento");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import MovimientoDetalle from "./MovimientoDetalle2";
+import MovimientoDetalle from "./MovimientoDetalle";
 
 interface Movimiento {
   id_mov_stock: number;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import MovimientosTable from "../components/MovimientosTable2";
+import MovimientosTable from "../components/MovimientosTable";
 import Link from "next/link";
 import MovimientoForm, { Deposito } from "../components/MovimientoForm";
 import Modal from "../components/Modal";
@@ -45,7 +45,7 @@ export default function MovimientosPage() {
         params.append("depositoId", selectedDeposito.toString());
       if (selectedNaturaleza) params.append("naturaleza", selectedNaturaleza);
 
-      const res = await fetch(`/api/v1/movimientos2?${params.toString()}`);
+      const res = await fetch(`/api/v1/movimientos?${params.toString()}`);
       const data = await res.json();
 
       console.log("📦 Datos recibidos:", data);

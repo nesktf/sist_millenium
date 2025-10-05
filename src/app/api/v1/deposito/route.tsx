@@ -1,5 +1,3 @@
-// app/api/v1/movimientos/all/route.tsx
-
 import { NextResponse } from "next/server";
 import {
   ArticuloDepositoData,
