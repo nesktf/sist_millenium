@@ -64,10 +64,17 @@ model ArticDepos {
   articulo      Articulo @relation(fields: [id_articulo], references: [id])
 }
 
-enum TipoMovimiento {
+enum NaturalezaMovimiento {
   INGRESO
   EGRESO
-  TRANSFERENCIA
+}
+
+model TipoOperacion {
+  id           Int @id @default(autoincrement())
+  nombre       String @unique
+  naturaleza   NaturalezaMovimiento
+
+  movimientos  MovimientoStock[]
 }
 
 model TipoComprobante {
@@ -84,7 +91,7 @@ model MovimientoStock {
   // dep_origen_id       Int?
   // dep_destino_id      Int?
   fecha_hora          DateTime
-  tipo                TipoMovimiento
+  id_tipo_operacion   Int?
   num_comprobante     String? @unique @db.VarChar(40)
   id_tipo_comprobante Int?
 
@@ -93,6 +100,7 @@ model MovimientoStock {
   // dep_origen          Deposito? @relation("origen", fields: [dep_origen_id], references: [id])
   // dep_destino         Deposito? @relation("destino", fields: [dep_destino_id], references: [id])
   tipo_comprobante    TipoComprobante? @relation(fields: [id_tipo_comprobante], references: [id])
+  tipo_operacion      TipoOperacion? @relation(fields: [id_tipo_operacion], references: [id])
 }
 
 model DetalleMovimiento {

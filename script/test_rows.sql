@@ -108,12 +108,24 @@ ON CONFLICT ("codigo") DO NOTHING;
 INSERT INTO "ArticDepos" ("id", "id_deposito", "id_articulo", "stock", "stock_min")
 VALUES
   (1, 1, 1, 20, 0);
-INSERT INTO "MovimientoStock" ("id", "fecha_hora", "tipo", "num_comprobante", "id_tipo_comprobante", "id_deposito")
+
+INSERT INTO "TipoOperacion" (id, nombre, naturaleza) VALUES
+(1, 'Compra', 'INGRESO'),
+(2, 'Devolución de Cliente', 'INGRESO'),
+(3, 'Venta', 'EGRESO'),
+(4, 'Rotura', 'EGRESO'),
+(5, 'Transferencia (Salida)', 'EGRESO'),
+(6, 'Transferencia (Entrada)', 'INGRESO');
+
+INSERT INTO "MovimientoStock" ("id", "id_deposito", "fecha_hora", "id_tipo_operacion", "num_comprobante", "id_tipo_comprobante")
 VALUES
-  (1, '2025-09-05 15:57:18.561', 'INGRESO', 'ING-1234', NULL, 1);
+  (1, 1, '2025-09-05 15:57:18.561', 1, 'ING-1234', NULL),
+  (2, 1, '2025-09-10 15:57:18.561', 3, 'TR-0001', NULL);
+
 INSERT INTO "DetalleMovimiento" ("id", "id_movimiento", "id_artic_depos", "cantidad")
 VALUES
-  (1, 1, 1, 20);
+  (1, 1, 1, 5),
+  (2, 2, 1, 10);
 
 INSERT INTO "Proveedor" (id, nombre, cuit, razon_social, domicilio, email, estado) VALUES
   (1, 'Distribuciones Alfa', '30-12345678-9', 'Distribuciones Alfa SRL', 'Calle Falsa 123, Ciudad', 'contacto@alfa.com', 'ACTIVO'),
