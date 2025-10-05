@@ -1,206 +1,93 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import MovimientosTable from "../components/MovimientosTable";
-import Modal from "../components/Modal";
+import MovimientosTable from "../components/MovimientosTable2";
 import Link from "next/link";
-import { DepositoPostAction } from "../api/v1/deposito/route";
 import MovimientoForm, { Deposito } from "../components/MovimientoForm";
+import Modal from "../components/Modal";
+
+interface Depositos {
+  id: number;
+  nombre: string;
+  direccion: string;
+  cap_max: number | null;
+}
 
 export default function MovimientosPage() {
   const [selectedDepositoAdd, setSelectedDepositoAdd] = useState<string>("");
-  const [depositosAdd, setDepositosAdd] = useState<Deposito[]>([]);
-
-  const [movimientos, setMovimientos] = useState<any[]>([]);
-  const [depositos, setDepositos] = useState<any[]>([]);
-  const [articulos, setArticulos] = useState<any[]>([]);
-
-  // Estados de los filtros
-  const [selectedDeposito, setSelectedDeposito] = useState("all");
-  const [selectedTipoMovimiento, setSelectedTipoMovimiento] =
-    useState<string>("all");
-  const [selectedArticulo, setSelectedArticulo] = useState("all");
-  const [selectedFecha, setSelectedFecha] = useState("");
-
-  const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => {
-    async function fetchData() {
-      const resDepositos = await fetch("/api/v1/deposito", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: 0 }),
-      });
-      if (resDepositos.ok) {
-        const data = await resDepositos.json();
-        setDepositos(data.depositos || []);
-      }
+  // NATURALEZA
+  const [selectedNaturaleza, setSelectedNaturaleza] = useState<string | null>(
+    null
+  );
 
-      const resArticulos = await fetch("/api/v1/prod");
-      if (resArticulos.ok) {
-        setArticulos(await resArticulos.json());
-      }
-    }
-    fetchData();
+  //DEPOSITO
+  const [depositos, setDepositos] = useState<Depositos[]>([]);
+  const [selectedDeposito, setSelectedDeposito] = useState<number | null>(null);
+
+  //MOVIMIENTOS
+  const [movimientos, setMovimientos] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/v1/deposito2")
+      .then((res) => res.json())
+      .then(setDepositos);
   }, []);
 
+  // ✅ Encapsulamos la lógica de carga en una función reutilizable
+  const fetchMovimientos = async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedDeposito)
+        params.append("depositoId", selectedDeposito.toString());
+      if (selectedNaturaleza) params.append("naturaleza", selectedNaturaleza);
+
+      const res = await fetch(`/api/v1/movimientos2?${params.toString()}`);
+      const data = await res.json();
+
+      console.log("📦 Datos recibidos:", data);
+      setMovimientos(data);
+    } catch (error) {
+      console.error("Error al obtener movimientos:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Se ejecuta automáticamente al cambiar los filtros
   useEffect(() => {
     fetchMovimientos();
-  }, [
-    selectedDeposito,
-    selectedTipoMovimiento,
-    selectedFecha,
-    selectedArticulo,
-  ]);
-
-  async function fetchMovimientos() {
-    setIsLoading(true);
-    const timezoneOffset = new Date().getTimezoneOffset();
-    const params = new URLSearchParams();
-
-    if (selectedFecha) {
-      params.append("fecha", selectedFecha);
-      params.append("timezoneOffset", timezoneOffset.toString());
-    }
-    if (selectedArticulo !== "all") {
-      params.append("articuloId", selectedArticulo);
-    }
-
-    let res: Response;
-
-    if (selectedDeposito === "all") {
-      res = await fetch(`/api/v1/movimientos/all?${params.toString()}`, {
-        cache: "no-store",
-      });
-    } else {
-      // Aquí asumo que el endpoint de depósito con acción get_movimientos devuelve:
-      // { movimientos: [{ id, fecha, tipo, comprobante, deposito, articulos: [{ nombre, cantidad }] }] }
-      res = await fetch("/api/v1/deposito", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: DepositoPostAction.get_movimientos,
-          id_deposito: parseInt(selectedDeposito),
-          fecha: selectedFecha || undefined,
-          timezoneOffset,
-          articuloId:
-            selectedArticulo === "all" ? undefined : parseInt(selectedArticulo),
-        }),
-      });
-    }
-
-    if (res.ok) {
-      const data = await res.json();
-      let flattenedMovs: any[] = [];
-
-      if (selectedDeposito === "all") {
-        // data ya es lista plana
-        flattenedMovs = data.map((mov: any) => ({
-          id_mov_stock: mov.id_mov_stock,
-          fecha: mov.fecha,
-          tipo: mov.tipoOperacion,
-          naturaleza: mov.naturalezaOperacion, // 👈 Guardamos la naturaleza
-          comprobante: mov.comprobante,
-          articulo: mov.articulo,
-          cantidad: mov.cantidad,
-          deposito: mov.deposito,
-        }));
-      } else {
-        // data tiene estructura con movimientos y dentro articulos[]
-        if (Array.isArray(data)) {
-          // En caso el endpoint devuelva directamente el array
-          flattenedMovs = data;
-        } else {
-          const movimientos = data.movimientos || [];
-          flattenedMovs = movimientos.flatMap((mov: any) =>
-            (mov.articulos || []).map((art: any) => ({
-              id_mov_stock: mov.id,
-              fecha: mov.fecha,
-              tipo: mov.tipo,
-              comprobante: mov.comprobante,
-              articulo: art.nombre || art.articulo,
-              cantidad: art.cantidad,
-              deposito: mov.deposito,
-            }))
-          );
-        }
-      }
-
-      if (selectedTipoMovimiento !== "all") {
-        setMovimientos(
-          flattenedMovs.filter(
-            (mov: any) => mov.naturaleza === selectedTipoMovimiento
-          )
-        );
-      } else {
-        setMovimientos(flattenedMovs);
-      }
-    } else {
-      setMovimientos([]);
-    }
-
-    setIsLoading(false);
-  }
-  const tiposMovimiento = [
-    { value: "INGRESO", label: "Ingreso" },
-    { value: "EGRESO", label: "Egreso" },
-  ];
+  }, [selectedDeposito, selectedNaturaleza]);
 
   return (
     <main className="p-6">
       <h1 className="text-2xl font-bold mb-4">Historial de Movimientos</h1>
 
-      <div className="mb-4">
-        <div className="flex gap-4 mb-3">
-          <select
-            className="select select-bordered select-sm"
-            value={selectedDepositoAdd}
-            onChange={(e) => setSelectedDepositoAdd(e.target.value)}
-          >
-            <option value="" disabled>
-              Selecciona un depósito
-            </option>
-            {depositos.map((d) => (
-              <option key={d.id_deposito} value={d.id_deposito}>
-                {d.direccion}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={() => setShowForm(true)}
-            className="btn btn-primary btn-sm"
-          >
-            Cargar Movimiento
-          </button>
-          <Link href="/" className="btn btn-outline btn-sm">
-            Volver a Productos
-          </Link>
-        </div>
-
-        {/* Filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-end">
-          {/* Selector de depósito */}
+      <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
+        {/* IZQUIERDA: FILTROS */}
+        <div className="flex flex-wrap gap-4">
           <div className="form-control">
             <label htmlFor="deposito-select" className="label pb-1">
               <span className="label-text font-medium">Depósito:</span>
             </label>
             <select
-              id="deposito-select"
+              value={selectedDeposito ?? ""}
+              onChange={(e) => setSelectedDeposito(Number(e.target.value))}
               className="select select-bordered select-sm w-full"
-              value={selectedDeposito}
-              onChange={(e) => setSelectedDeposito(e.target.value)}
+              id="deposito-select"
             >
-              <option value="all">Todos los Depósitos</option>
-              {depositos.map((dep: any) => (
-                <option key={dep.id_deposito} value={dep.id_deposito}>
-                  {dep.direccion}
+              <option value="">Todos los depósitos</option>
+              {depositos.map((dep) => (
+                <option key={dep.id} value={dep.id}>
+                  {dep.nombre}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Selector de tipo de movimiento */}
           <div className="form-control">
             <label htmlFor="tipo-select" className="label pb-1">
               <span className="label-text font-medium">
@@ -208,19 +95,47 @@ export default function MovimientosPage() {
               </span>
             </label>
             <select
-              id="tipo-select"
+              value={selectedNaturaleza ?? ""}
+              onChange={(e) => setSelectedNaturaleza(e.target.value || null)}
               className="select select-bordered select-sm w-full"
-              value={selectedTipoMovimiento}
-              onChange={(e) => setSelectedTipoMovimiento(e.target.value)}
+              id="tipo-select"
             >
-              <option value="all">Todos los Tipos</option>
-              {tiposMovimiento.map((tipo) => (
-                <option key={tipo.value} value={tipo.value}>
-                  {tipo.label}
+              <option value="">Todos</option>
+              <option value="INGRESO">Ingreso</option>
+              <option value="EGRESO">Egreso</option>
+            </select>
+          </div>
+        </div>
+
+        {/* DERECHA: DEPÓSITO + BOTÓN CARGAR MOVIMIENTO */}
+        <div className="flex flex-wrap gap-2 items-end">
+          <div className="form-control">
+            <label htmlFor="deposito-add-select" className="label pb-1">
+              <span className="label-text font-medium">Depósito a Cargar:</span>
+            </label>
+            <select
+              id="deposito-add-select"
+              className="select select-bordered select-sm w-full"
+              value={selectedDepositoAdd}
+              onChange={(e) => setSelectedDepositoAdd(e.target.value)}
+            >
+              <option value="" disabled>
+                Selecciona un depósito
+              </option>
+              {depositos.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.direccion}
                 </option>
               ))}
             </select>
           </div>
+
+          <button
+            onClick={() => setShowForm(true)}
+            className="btn btn-primary btn-sm"
+          >
+            Cargar Movimiento
+          </button>
         </div>
       </div>
 

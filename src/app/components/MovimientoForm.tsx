@@ -175,8 +175,7 @@ export default function MovimientoForm({
     e.preventDefault();
     if (!validate()) return;
 
-    const comprobanteNumero = comprobante.replace(/^\D+/g, ""); // Quita prefijos no numéricos
-    const comprobante_str = prefix_map.get(tipo) + comprobanteNumero;
+    const comprobante_str = comprobante;
 
     const form_data = {
       action: DepositoPostAction.new_movimiento,

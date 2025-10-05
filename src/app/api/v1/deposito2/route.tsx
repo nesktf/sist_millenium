@@ -11,7 +11,7 @@ import {
 export async function GET(req: Request) {
   return await retrieveDeposito().then((deps) => {
     return NextResponse.json(
-      deps.map((dep) => {
+      deps.map((dep: { id: number; data: DepositoDatas }) => {
         let data: DepositoDatas = dep.data;
         return {
           id: dep.id,

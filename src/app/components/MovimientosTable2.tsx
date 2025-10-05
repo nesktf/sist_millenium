@@ -1,16 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import MovimientoDetalle from "./MovimientoDetalle";
+import MovimientoDetalle from "./MovimientoDetalle2";
 
 interface Movimiento {
   id_mov_stock: number;
   fecha: string;
-  tipo: string;
   comprobante: string;
-  articulo: string;
-  cantidad: number;
-  deposito?: string;
+  tipoOperacion: string;
+  naturaleza: string;
 }
 
 export default function MovimientosTable({
@@ -23,36 +21,6 @@ export default function MovimientosTable({
   const [movimientoSeleccionado, setMovimientoSeleccionado] = useState<
     number | null
   >(null);
-
-  // Agrupar movimientos por id_mov_stock para mostrar una fila por movimiento
-  const movimientosAgrupados = movimientos.reduce((acc, mov) => {
-    if (!acc[mov.id_mov_stock]) {
-      acc[mov.id_mov_stock] = {
-        id_mov_stock: mov.id_mov_stock,
-        fecha: mov.fecha,
-        tipo: mov.tipo,
-        comprobante: mov.comprobante,
-        deposito: mov.deposito,
-        articulos: [],
-      };
-    }
-    acc[mov.id_mov_stock].articulos.push({
-      articulo: mov.articulo,
-      cantidad: mov.cantidad,
-    });
-    return acc;
-  }, {} as Record<number, any>);
-
-  const movimientosArray = Object.values(movimientosAgrupados).sort(
-    (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
-  );
-
-  const extractNumeroComprobante = (comprobante: string) => {
-    // Extraer solo el número del comprobante (después del último guión)
-    const partes = comprobante.split(" - ");
-    return partes[partes.length - 1] || comprobante;
-  };
-
   return (
     <>
       <div className="overflow-x-auto mt-4">
@@ -72,30 +40,30 @@ export default function MovimientosTable({
                   Cargando movimientos...
                 </td>
               </tr>
-            ) : movimientosArray.length === 0 ? (
+            ) : movimientos.length === 0 ? (
               <tr>
                 <td colSpan={4} className="text-center py-4">
                   No hay movimientos para mostrar.
                 </td>
               </tr>
             ) : (
-              movimientosArray.map((mov, index) => (
-                <tr key={`${mov.id_mov_stock}-${index}`}>
+              movimientos.map((mov) => (
+                <tr key={mov.id_mov_stock}>
                   <td>{new Date(mov.fecha).toLocaleString("es-AR")}</td>
                   <td>
                     <span
                       className={`badge ${
-                        mov.tipo === "INGRESO"
+                        mov.naturaleza === "INGRESO"
                           ? "badge-success"
-                          : mov.tipo === "EGRESO"
+                          : mov.naturaleza === "EGRESO"
                           ? "badge-error"
                           : "badge-info"
                       }`}
                     >
-                      {mov.tipo}
+                      {mov.tipoOperacion}
                     </span>
                   </td>
-                  <td>{extractNumeroComprobante(mov.comprobante)}</td>
+                  <td>{mov.comprobante || "—"}</td>
                   <td>
                     <button
                       className="btn btn-sm btn-outline"
@@ -103,6 +71,7 @@ export default function MovimientosTable({
                         setMovimientoSeleccionado(mov.id_mov_stock)
                       }
                     >
+                      {" "}
                       Ver Detalle
                     </button>
                   </td>

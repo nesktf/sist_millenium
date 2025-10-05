@@ -117,7 +117,6 @@ async function getMovimientos(req: any) {
       mov.detalles_mov.map((detalle) => ({
         id_mov_stock: mov.id,
         fecha: mov.fecha_hora,
-        tipo: mov.tipo,
         comprobante: `${mov.tipo_comprobante?.nombre || ""} - ${
           mov.num_comprobante || ""
         }`,
