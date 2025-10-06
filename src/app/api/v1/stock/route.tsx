@@ -1,5 +1,7 @@
+"use server";
+
 import { NextResponse } from "next/server";
-import prisma from "../../../prisma";
+import { prisma } from "@/prisma/instance";
 
 export async function GET(req: Request) {
   try {

@@ -1,6 +1,7 @@
-// app/api/v1/tipo_operacion/route.ts
+"use server";
+
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "../../../prisma";
+import { prisma } from "@/prisma/instance";
 
 export async function GET(req: NextRequest) {
   const tipos = await prisma.tipoOperacion.findMany();

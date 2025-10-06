@@ -1,4 +1,6 @@
-import { ItemOrdenCompra, OrdenCompraData, registerOrdenCompra, retrieveArticulo, retrieveOrdenCompra, retrieveOrdenesCompra, updateOrdenCompraSaldo } from "@/app/prisma";
+"use server";
+
+import { ItemOrdenCompra, OrdenCompraData, registerOrdenCompra, retrieveArticulo, retrieveOrdenCompra, retrieveOrdenesCompra, updateOrdenCompraSaldo } from "@/prisma/instance";
 import { FormaDePago } from "@/generated/prisma";
 import { NextRequest, NextResponse } from "next/server"
 

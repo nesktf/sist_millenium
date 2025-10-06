@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DepositoPostAction } from "../api/v1/deposito/route";
+import { DepositoPostAction } from "@/app/api/v1/deposito/route";
 import { NaturalezaMovimiento } from "@/generated/prisma";
 
 const prefix_map = new Map([

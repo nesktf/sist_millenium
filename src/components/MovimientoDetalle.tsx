@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Modal from "./Modal";
+import Modal from "@/components/Modal";
 
 interface MovimientoDetalleData {
   id: number;

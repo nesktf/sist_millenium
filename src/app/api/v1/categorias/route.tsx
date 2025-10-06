@@ -1,6 +1,7 @@
-// app/api/v1/categorias/route.tsx
+"use server";
+
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/app/prisma";
+import { prisma } from "@/prisma/instance";
 
 export async function GET() {
   const cats = await prisma.categoriaArticulo.findMany({

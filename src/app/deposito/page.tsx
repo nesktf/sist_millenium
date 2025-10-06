@@ -1,11 +1,10 @@
 "use client";
 
-import DepositoTable from "../components/DepositoTable";
+import DepositoTable from "@/components/DepositoTable";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
-import DepositoForm from "../components/DepositoForm";
-import ModalDeposito from "../components/ModalDeposito";
-import Link from "next/link";
+import DepositoForm from "@/components/DepositoForm";
+import ModalDeposito from "@/components/ModalDeposito";
 
 export default function DepositoPage() {
   const [deposito, setDeposito] = useState<any[]>([]);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Modal from "../components/Modal"; // Ajusta la ruta según tu estructura
+import Modal from "@/components/Modal"; // Ajusta la ruta según tu estructura
 
 // --- INTERFACES ---
 interface ComprobanteProveedor {

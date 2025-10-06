@@ -4,10 +4,9 @@ import {
   FormaDePago,
   PrismaClient,
   NaturalezaMovimiento,
-} from "../generated/prisma";
+} from "@/generated/prisma";
 
-const prisma = new PrismaClient();
-export default prisma;
+export const prisma = new PrismaClient();
 
 type DBId = number;
 type DBData<T> = { id: DBId; data: T };

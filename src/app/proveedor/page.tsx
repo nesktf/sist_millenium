@@ -1,10 +1,10 @@
 "use client";
 
-import ProveedoresTable from "../components/ProveedoresTable";
+import ProveedoresTable from "@/components/ProveedoresTable";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
-import ProveedorForm from "../components/ProveedorForm";
-import ModalProveedor from "../components/ModalProveedor";
+import ProveedorForm from "@/components/ProveedorForm";
+import ModalProveedor from "@/components/ModalProveedor";
 import Link from "next/link";
 
 export default function ProveedorPage() {

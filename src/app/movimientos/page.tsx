@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import MovimientosTable from "../components/MovimientosTable";
-import Link from "next/link";
-import MovimientoForm, { Deposito } from "../components/MovimientoForm";
-import Modal from "../components/Modal";
+import MovimientosTable from "@/components/MovimientosTable";
+import MovimientoForm, { Deposito } from "@/components/MovimientoForm";
+import Modal from "@/components/Modal";
 
 interface Depositos {
   id: number;
