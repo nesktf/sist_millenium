@@ -139,6 +139,21 @@ export default function MovimientosPage() {
         </div>
       </div>
 
+
+{/* 🔽 Info del depósito seleccionado */}
+{selectedDeposito && (() => {
+  const depSel = depositos.find((d) => d.id === selectedDeposito);
+  return depSel ? (
+    <div className="mb-4 p-3 border rounded-lg bg-base-100 shadow-sm">
+      <p className="text-sm text-gray-500 mb-1">Depósito seleccionado:</p>
+      <p className="font-semibold text-gray-800">{depSel.nombre}</p>
+      <p className="text-gray-600 text-sm">{depSel.direccion}</p>
+    </div>
+  ) : null;
+})()}
+
+
+
       <MovimientosTable movimientos={movimientos} isLoading={isLoading} />
 
       {/* Modal con formulario */}

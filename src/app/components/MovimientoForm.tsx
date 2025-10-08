@@ -9,7 +9,8 @@ const prefix_map = new Map([
   [NaturalezaMovimiento.EGRESO.toString(), "EGR-"],
 ]);
 
-export type Deposito = { id_deposito: number; direccion: string };
+export type Deposito = { id_deposito: number; nombre: string; direccion: string };
+
 type Articulo = { codigo: string; id: number; nombre: string };
 type ArticuloSeleccionado = { id: number; nombre: string; cantidad: number };
 type TipoOperacion = {
@@ -218,13 +219,13 @@ export default function MovimientoForm({
     <form onSubmit={onSubmit} className="space-y-4 min-w-[32rem]">
       {/* Cabecera con depósito elegido */}
       {depositoSeleccionado && (
-        <div className="bg-gray-100 p-4 rounded-lg flex justify-between">
-          <div className="flex items-center">
-            <span className="font-medium text-lg">Depósito seleccionado:</span>
-            <span className="ml-2 text-gray-800">
-              {depositoSeleccionado.direccion}
-            </span>
-          </div>
+        <div className="bg-gray-100 p-4 rounded-lg">
+          <div className="text-sm text-gray-500 mb-1">Depósito seleccionado</div>
+            <div className="font-semibold text-gray-800">{depositoSeleccionado.nombre}</div>
+            <div className="text-gray-600">{depositoSeleccionado.direccion}</div>
+              
+           
+          
         </div>
       )}
 
