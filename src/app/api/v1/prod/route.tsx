@@ -21,6 +21,7 @@ export async function GET(req: Request) {
           id: prod.id,
           marca: prod.marca,
           categoria: prod.categoria,
+          imagen: `${data.getNombre()}.jpeg`, // construimos el nombre de la imagen
         };
       })
     );

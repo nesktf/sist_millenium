@@ -1,5 +1,3 @@
-"use client";
-
 import Sidebar from "@/components/sidebar";
 import "./globals.css";
 import { ReactNode } from "react";
@@ -14,7 +12,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-screen bg-base-100 text-base-content">
         <div className="flex">
           <Sidebar />
-          <main className="flex-1 p-6">{children}</main>
+          <main className="ml-64 flex-1 p-6">{children}</main>
         </div>
       </body>
     </html>
