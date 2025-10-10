@@ -12,58 +12,59 @@ datasource db {
 }
 
 model CategoriaArticulo {
-  id      Int @id @default(autoincrement())
-  nombre  String @db.VarChar(60)
+  id     Int    @id @default(autoincrement())
+  nombre String @db.VarChar(60)
 
   articulos Articulo[]
 }
 
 model MarcaArticulo {
-  id      Int @id @default(autoincrement())
-  nombre  String @db.VarChar(60)
+  id     Int    @id @default(autoincrement())
+  nombre String @db.VarChar(60)
 
   articulos Articulo[]
 }
 
 model Articulo {
-  id            Int @id @default(autoincrement())
-  codigo        String @unique @db.VarChar(60)
-  nombre        String @db.VarChar(120)
-  imagen        String?
-  id_categoria  Int?
-  id_marca      Int?
-  
-  depositos     ArticDepos[]
-  detalles_orden DetalleOrdenCompra[]
-  detalles_comprobante DetalleComprobanteProveedor[]
-  carritos CarritoUser[]
-  ventas DetalleVentaArticulo[]
+  id           Int     @id @default(autoincrement())
+  codigo       String  @unique @db.VarChar(60)
+  nombre       String  @db.VarChar(120)
+  imagen       String?
+  id_categoria Int?
+  id_marca     Int?
 
-  categoria     CategoriaArticulo? @relation(fields: [id_categoria], references: [id])
-  marca         MarcaArticulo? @relation(fields: [id_marca], references: [id])
+  depositos            ArticDepos[]
+  detalles_orden       DetalleOrdenCompra[]
+  detalles_comprobante DetalleComprobanteProveedor[]
+  carritos             CarritoUser[]
+  ventas               DetalleVentaArticulo[]
+  precios_venta        PrecioDeVenta[]
+
+  categoria CategoriaArticulo? @relation(fields: [id_categoria], references: [id])
+  marca     MarcaArticulo?     @relation(fields: [id_marca], references: [id])
 }
 
 model Deposito {
-  id          Int @id @default(autoincrement())
-  nombre      String
-  direccion   String
-  cap_max     Int?
+  id        Int    @id @default(autoincrement())
+  nombre    String
+  direccion String
+  cap_max   Int?
 
-  articulos       ArticDepos[]
-  movimientos     MovimientoStock[]
+  articulos      ArticDepos[]
+  movimientos    MovimientoStock[]
   ordenes_compra OrdenCompra[]
 }
 
 model ArticDepos {
-  id            Int @id @default(autoincrement())
-  id_deposito   Int
-  id_articulo   Int
-  stock         Int @default(0)
-  stock_min     Int @default(0)
+  id          Int @id @default(autoincrement())
+  id_deposito Int
+  id_articulo Int
+  stock       Int @default(0)
+  stock_min   Int @default(0)
 
-  detalles_mov  DetalleMovimiento[]
-  deposito      Deposito @relation(fields: [id_deposito], references: [id])
-  articulo      Articulo @relation(fields: [id_articulo], references: [id])
+  detalles_mov DetalleMovimiento[]
+  deposito     Deposito            @relation(fields: [id_deposito], references: [id])
+  articulo     Articulo            @relation(fields: [id_articulo], references: [id])
 }
 
 enum NaturalezaMovimiento {
@@ -72,43 +73,43 @@ enum NaturalezaMovimiento {
 }
 
 model TipoOperacion {
-  id           Int @id @default(autoincrement())
-  nombre       String @unique
-  naturaleza   NaturalezaMovimiento
+  id         Int                  @id @default(autoincrement())
+  nombre     String               @unique
+  naturaleza NaturalezaMovimiento
 
-  movimientos  MovimientoStock[]
+  movimientos MovimientoStock[]
 }
 
 model TipoComprobante {
-  id            Int @id @default(autoincrement())
-  nombre        String @db.VarChar(60)
-  observacion   String? @db.VarChar(200)
+  id          Int     @id @default(autoincrement())
+  nombre      String  @db.VarChar(60)
+  observacion String? @db.VarChar(200)
 
-  movimientos   MovimientoStock[]
+  movimientos MovimientoStock[]
 }
 
 model MovimientoStock {
-  id                  Int @id @default(autoincrement())
+  id                  Int      @id @default(autoincrement())
   id_deposito         Int
   fecha_hora          DateTime
   id_tipo_operacion   Int?
-  num_comprobante     String? @unique @db.VarChar(40)
+  num_comprobante     String?  @unique @db.VarChar(40)
   id_tipo_comprobante Int?
 
-  detalles_mov        DetalleMovimiento[]
-  deposito            Deposito @relation(fields: [id_deposito], references: [id])
-  tipo_comprobante    TipoComprobante? @relation(fields: [id_tipo_comprobante], references: [id])
-  tipo_operacion      TipoOperacion? @relation(fields: [id_tipo_operacion], references: [id])
+  detalles_mov     DetalleMovimiento[]
+  deposito         Deposito            @relation(fields: [id_deposito], references: [id])
+  tipo_comprobante TipoComprobante?    @relation(fields: [id_tipo_comprobante], references: [id])
+  tipo_operacion   TipoOperacion?      @relation(fields: [id_tipo_operacion], references: [id])
 }
 
 model DetalleMovimiento {
-  id              Int @id @default(autoincrement())
-  id_movimiento   Int
-  id_artic_depos  Int
-  cantidad        Int
+  id             Int @id @default(autoincrement())
+  id_movimiento  Int
+  id_artic_depos Int
+  cantidad       Int
 
-  movimiento      MovimientoStock @relation(fields: [id_movimiento], references: [id])
-  artic_depos     ArticDepos @relation(fields: [id_artic_depos], references: [id])
+  movimiento  MovimientoStock @relation(fields: [id_movimiento], references: [id])
+  artic_depos ArticDepos      @relation(fields: [id_artic_depos], references: [id])
 }
 
 enum EstadoProveedor {
@@ -117,55 +118,55 @@ enum EstadoProveedor {
 }
 
 model Proveedor {
-  id Int @id @default(autoincrement())
-  nombre String
-  cuit String
+  id           Int             @id @default(autoincrement())
+  nombre       String
+  cuit         String
   razon_social String
-  domicilio String
-  email String
-  estado EstadoProveedor
+  domicilio    String
+  email        String
+  estado       EstadoProveedor
 
-  comprobantes ComprobanteProveedor[]
+  comprobantes   ComprobanteProveedor[]
   ordenes_compra OrdenCompra[]
-  ordenes_pago OrdenPago[]
+  ordenes_pago   OrdenPago[]
 }
 
 model TipoComprobanteProveedor {
-  id Int @id @default(autoincrement())
-  nombre String
+  id          Int    @id @default(autoincrement())
+  nombre      String
   descripcion String
 
   comprobantes ComprobanteProveedor[]
 }
 
 model ComprobanteProveedor {
-  id Int @id @default(autoincrement())
-  id_proveedor Int
+  id                  Int      @id @default(autoincrement())
+  id_proveedor        Int
   id_tipo_comprobante Int
-  id_orden_compra Int?
-  fecha DateTime
-  letra String @db.VarChar(1)
-  sucursal String @db.VarChar(4)
-  numero String @db.VarChar(8)
-  total Int
+  id_orden_compra     Int?
+  fecha               DateTime
+  letra               String   @db.VarChar(1)
+  sucursal            String   @db.VarChar(4)
+  numero              String   @db.VarChar(8)
+  total               Int
 
-  proveedor Proveedor @relation(fields: [id_proveedor], references: [id])
-  tipo_comprobante TipoComprobanteProveedor @relation(fields: [id_tipo_comprobante], references: [id])
-  orden_pago OrdenPago?
-  orden_compra OrdenCompra? @relation(fields: [id_orden_compra], references: [id])
-  detalles DetalleComprobanteProveedor[]
+  proveedor        Proveedor                     @relation(fields: [id_proveedor], references: [id])
+  tipo_comprobante TipoComprobanteProveedor      @relation(fields: [id_tipo_comprobante], references: [id])
+  orden_pago       OrdenPago?
+  orden_compra     OrdenCompra?                  @relation(fields: [id_orden_compra], references: [id])
+  detalles         DetalleComprobanteProveedor[]
 }
 
 model DetalleComprobanteProveedor {
-  id Int @id @default(autoincrement())
-  id_comprobante Int
-  id_articulo Int
-  cantidad Int
+  id              Int     @id @default(autoincrement())
+  id_comprobante  Int
+  id_articulo     Int
+  cantidad        Int
   precio_unitario Int
-  observacion String?
+  observacion     String?
 
   comprobante ComprobanteProveedor @relation(fields: [id_comprobante], references: [id])
-  articulo Articulo @relation(fields: [id_articulo], references: [id])
+  articulo    Articulo             @relation(fields: [id_articulo], references: [id])
 }
 
 enum EstadoOrdenPago {
@@ -175,17 +176,18 @@ enum EstadoOrdenPago {
 }
 
 model OrdenPago {
-  id Int @id @default(autoincrement())
-  numero String
-  fecha DateTime
-  estado EstadoOrdenPago
-  cantidad Int?
-  total Int
-  id_comprobante Int @unique
-  id_proveedor Int
+  id             Int             @id @default(autoincrement())
+  numero         String
+  fecha          DateTime
+  estado         EstadoOrdenPago
+  saldo          Int?
+  total          Int
+  id_comprobante Int             @unique
+  id_proveedor   Int
 
-  comprobante ComprobanteProveedor? @relation(fields: [id_comprobante], references: [id])
-  proveedor Proveedor @relation(fields: [id_proveedor], references: [id])
+  comprobante     ComprobanteProveedor? @relation(fields: [id_comprobante], references: [id])
+  proveedor       Proveedor             @relation(fields: [id_proveedor], references: [id])
+  historial_pagos HistorialPago[]
 }
 
 enum FormaDePago {
@@ -194,60 +196,60 @@ enum FormaDePago {
 }
 
 model DetalleOrdenCompra {
-  id Int @id @default(autoincrement())
-  id_orden Int
+  id          Int @id @default(autoincrement())
+  id_orden    Int
   id_articulo Int
-  precio Int
-  cantidad Int
+  precio      Int
+  cantidad    Int
 
   orden_compra OrdenCompra @relation(fields: [id_orden], references: [id])
-  articulo Articulo @relation(fields: [id_articulo], references: [id])
+  articulo     Articulo    @relation(fields: [id_articulo], references: [id])
 }
 
 model OrdenCompra {
-  id Int @id @default(autoincrement())
-  precio_total Int
-  saldo Int
-  forma_pago FormaDePago
+  id             Int         @id @default(autoincrement())
+  precio_total   Int
+  saldo          Int
+  forma_pago     FormaDePago
   fecha_esperada DateTime
-  id_deposito Int
-  id_proveedor Int
+  id_deposito    Int
+  id_proveedor   Int
 
-  detalle DetalleOrdenCompra[]
+  detalle     DetalleOrdenCompra[]
   comprobante ComprobanteProveedor[]
 
   proveedor Proveedor @relation(fields: [id_proveedor], references: [id])
-  deposito Deposito @relation(fields: [id_deposito], references: [id])
+  deposito  Deposito  @relation(fields: [id_deposito], references: [id])
 }
 
 model UserEcommerce {
-  id Int @id @default(autoincrement())
-  correo String
+  id          Int    @id @default(autoincrement())
+  correo      String
   contraseña String
-  nombre String
-  apellido String
-  domicilio String
+  nombre      String
+  apellido    String
+  domicilio   String
 
-  ventas VentaArticulo[]
+  ventas  VentaArticulo[]
   carrito CarritoUser[]
 }
 
 model CarritoUser {
-  id Int @id @default(autoincrement())
-  precio Int
-  cantidad Int
+  id          Int @id @default(autoincrement())
+  precio      Int
+  cantidad    Int
   id_articulo Int
-  id_user Int
+  id_user     Int
 
-  user UserEcommerce @relation(fields: [id_user], references: [id])
-  articulo Articulo @relation(fields: [id_articulo], references: [id])
+  user     UserEcommerce @relation(fields: [id_user], references: [id])
+  articulo Articulo      @relation(fields: [id_articulo], references: [id])
 }
 
 model VentaArticulo {
-  id Int @id @default(autoincrement())
-  numero String
-  total Int
-  fecha DateTime
+  id      Int      @id @default(autoincrement())
+  numero  String
+  total   Int
+  fecha   DateTime
   id_user Int?
 
   detalle DetalleVentaArticulo[]
@@ -256,12 +258,33 @@ model VentaArticulo {
 }
 
 model DetalleVentaArticulo {
-  id Int @id @default(autoincrement())
-  precio Int
-  cantidad Int
-  id_venta Int
+  id          Int @id @default(autoincrement())
+  precio      Int
+  cantidad    Int
+  id_venta    Int
   id_articulo Int
 
-  venta VentaArticulo @relation(fields: [id_venta], references: [id])
-  articulo Articulo @relation(fields: [id_articulo], references: [id])
+  venta    VentaArticulo @relation(fields: [id_venta], references: [id])
+  articulo Articulo      @relation(fields: [id_articulo], references: [id])
+}
+
+model PrecioDeVenta {
+  id          Int @id @default(autoincrement())
+  id_producto Int
+  precio      Int
+
+  producto Articulo @relation(fields: [id_producto], references: [id])
+}
+
+model HistorialPago {
+  id                  Int         @id @default(autoincrement())
+  fecha               DateTime
+  id_orden_pago       Int
+  monto               Int
+  forma_pago          FormaDePago
+  referencia          String?     @db.VarChar(255)
+  saldo_anterior      Int
+  pendiente_por_pagar Int
+
+  orden_pago OrdenPago @relation(fields: [id_orden_pago], references: [id])
 }
