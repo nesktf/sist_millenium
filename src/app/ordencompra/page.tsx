@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { APIFormaPago } from "../api/v1/orden-compra/route";
+import { APIFormaPago } from "@/app/api/v1/orden-compra/route";
 
 type ArticuloData = {
   id: number;

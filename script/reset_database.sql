@@ -12,5 +12,8 @@ TRUNCATE "DetalleComprobanteProveedor" CASCADE;
 TRUNCATE "OrdenPago" CASCADE;
 TRUNCATE "DetalleOrdenCompra" CASCADE;
 TRUNCATE "OrdenCompra" CASCADE;
+TRUNCATE "TipoOperacion" CASCADE;
+TRUNCATE "MovimientoStock" CASCADE;
+TRUNCATE "DetalleMovimiento" CASCADE;
 
 COMMIT;

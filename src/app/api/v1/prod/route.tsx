@@ -1,3 +1,5 @@
+"use server";
+
 import { NextResponse } from "next/server";
 import {
   ArticuloData,
@@ -5,7 +7,7 @@ import {
   registerArticulo,
   updateArticulo,
   deleteArticulo,
-} from "@/app/prisma";
+} from "@/prisma/instance";
 
 // Devolver productos
 export async function GET(req: Request) {
@@ -19,6 +21,7 @@ export async function GET(req: Request) {
           id: prod.id,
           marca: prod.marca,
           categoria: prod.categoria,
+          imagen: `${data.getNombre()}.jpeg`, // construimos el nombre de la imagen
         };
       })
     );

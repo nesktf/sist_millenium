@@ -1,23 +1,16 @@
-// app/api/v1/movimientos/[id]/route.ts
+"use server";
 
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/app/prisma";
+import { prisma } from "@/prisma/instance";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
   try {
+    const params = await context.params;
     const movimientoId = parseInt(params.id);
-    
     if (isNaN(movimientoId)) {
-      return NextResponse.json(
-        { error: "ID de movimiento inválido" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    // Obtener el movimiento específico con todos sus detalles
     const movimiento = await prisma.movimientoStock.findUnique({
       where: {
         id: movimientoId,
@@ -25,6 +18,7 @@ export async function GET(
       include: {
         deposito: true,
         tipo_comprobante: true,
+        tipo_operacion: true,
         detalles_mov: {
           include: {
             artic_depos: {
@@ -48,23 +42,26 @@ export async function GET(
     const resultado = {
       id: movimiento.id,
       fecha: movimiento.fecha_hora,
-      tipo: movimiento.tipo,
-      comprobante: `${movimiento.tipo_comprobante?.nombre || ''} - ${movimiento.num_comprobante || ''}`,
+      tipoOperacion: movimiento.tipo_operacion?.nombre || null,
+      naturalezaOperacion: movimiento.tipo_operacion?.naturaleza || null,
+      comprobante: `${movimiento.tipo_comprobante?.nombre || ""} - ${
+        movimiento.num_comprobante || ""
+      }`,
       deposito: {
+        nombre: movimiento.deposito.nombre,
         direccion: movimiento.deposito.direccion,
       },
       detalles_mov: movimiento.detalles_mov.map((detalle) => ({
         cantidad: detalle.cantidad,
-        artic_depos: {
-          articulo: {
-            nombre: detalle.artic_depos.articulo.nombre,
-          },
+        articulo: {
+          nombre: detalle.artic_depos.articulo.nombre,
+          codigo: detalle.artic_depos.articulo.codigo,
         },
+        stockActual: detalle.artic_depos.stock,
       })),
     };
 
     return NextResponse.json(resultado);
-
   } catch (error) {
     console.error("Error al obtener detalle del movimiento:", error);
     return NextResponse.json(

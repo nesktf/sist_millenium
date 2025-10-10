@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Modal from "../components/Modal"; // Ajusta la ruta según tu estructura
+import Modal from "@/components/Modal"; // Ajusta la ruta según tu estructura
 
 // --- INTERFACES ---
 interface ComprobanteProveedor {
@@ -69,7 +69,9 @@ function RegistrarOrdenPagoModal({
 
   const totalComprobante = calcularTotal(formData.id_comprobante);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     
     if (name === 'id_comprobante') {

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import CartIcon from "./CartIcon"; // 1. IMPORTAMOS EL CARTICON
 
 
 export default function Sidebar() {
@@ -11,7 +10,7 @@ export default function Sidebar() {
     setOpenMenu(openMenu === menu ? null : menu);
 
   return (
-    <div className="w-64 h-screen bg-gray-900 text-white shadow-lg flex flex-col">
+    <div className="fixed left-0 top-0 w-64 h-screen bg-gray-900 text-white shadow-lg flex flex-col">
       {/* Logo */}
       <div className="px-6 py-4 border-b border-gray-700">
         <h2 className="text-2xl font-bold tracking-wide">Millenium</h2>
@@ -19,6 +18,16 @@ export default function Sidebar() {
 
       {/* Menú */}
       <nav className="flex-1 overflow-y-auto px-2 py-4">
+        {/* Ecommerce */}
+        <div className="mb-4">
+          <Link
+            href="/e-commerce"
+            className="block px-4 py-2 text-left font-semibold rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
+          >
+            E-commerce
+          </Link>
+        </div>
+
         {/* Gestión de Depósitos */}
         <div className="mb-4">
           <button
@@ -146,12 +155,6 @@ export default function Sidebar() {
           )}
         </div>
       </nav>
-      {/* 2. PIE DE PÁGINA DEL SIDEBAR CON EL ÍCONO DEL CARRITO */}
-      <div className="px-4 py-4 border-t border-gray-700">
-        <div className="flex justify-center">
-            <CartIcon />
-        </div>
-      </div>
     </div>
   );
 }
