@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import CartIcon from "./CartIcon"; // 1. IMPORTAMOS EL CARTICON
+
 
 export default function Sidebar() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -144,6 +146,12 @@ export default function Sidebar() {
           )}
         </div>
       </nav>
+      {/* 2. PIE DE PÁGINA DEL SIDEBAR CON EL ÍCONO DEL CARRITO */}
+      <div className="px-4 py-4 border-t border-gray-700">
+        <div className="flex justify-center">
+            <CartIcon />
+        </div>
+      </div>
     </div>
   );
 }
