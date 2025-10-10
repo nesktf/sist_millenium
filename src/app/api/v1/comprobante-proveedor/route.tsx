@@ -94,6 +94,7 @@ export async function POST(req: Request) {
           letra,
           sucursal: sucursalTrimmed,
           numero,
+          total: Math.round(total),
         },
       });
 
