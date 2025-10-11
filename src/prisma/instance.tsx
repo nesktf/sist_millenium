@@ -714,17 +714,26 @@ export class OrdenCompraData {
   saldo: number;
   total: number;
   items: Array<ItemOrdenCompra>;
+  fecha_esperada: Date;
+  id_deposito: number;
+  id_proveedor: number;
 
   private constructor(
     forma_pago: FormaDePago,
     saldo: number,
     total: number,
-    items: Array<ItemOrdenCompra>
+    items: Array<ItemOrdenCompra>,
+    fecha_esperada: Date,
+    id_deposito: number,
+    id_proveedor: number
   ) {
     this.forma_pago = forma_pago;
     this.saldo = saldo;
     this.total = total;
     this.items = items;
+    this.fecha_esperada = fecha_esperada;
+    this.id_deposito = id_deposito;
+    this.id_proveedor = id_proveedor;
   }
 
   getFormaPago(): FormaDePago {
@@ -740,28 +749,63 @@ export class OrdenCompraData {
     return this.items;
   }
 
+  getFechaEsperada() {
+    return this.fecha_esperada;
+  }
+  getIdDeposito() {
+    return this.id_deposito;
+  }
+  getIdProveedor() {
+    return this.id_proveedor;
+  }
+
   static fromItems(
     forma_pago: FormaDePago,
-    items: Array<ItemOrdenCompra>
+    items: Array<ItemOrdenCompra>,
+    fecha_esperada: Date,
+    id_deposito: number,
+    id_proveedor: number
   ): OrdenCompraData {
     let total = items.reduce(
       (total, curr) => total + curr.precio * curr.cantidad,
       0
     );
-    return new OrdenCompraData(forma_pago, total, total, items);
+    return new OrdenCompraData(
+      forma_pago,
+      total, //saldo inicial
+      total, //total de la orden
+      items,
+      fecha_esperada,
+      id_deposito,
+      id_proveedor
+    );
   }
   static fromDBEntry({
     forma_pago,
     saldo,
     total,
     items,
+    fecha_esperada,
+    id_deposito,
+    id_proveedor,
   }: {
     forma_pago: FormaDePago;
     saldo: number;
     total: number;
     items: Array<ItemOrdenCompra>;
+    fecha_esperada: Date;
+    id_deposito: number;
+    id_proveedor: number;
   }) {
-    return new OrdenCompraData(forma_pago, saldo, total, items);
+    return new OrdenCompraData(
+      forma_pago,
+      saldo,
+      total,
+      items,
+      fecha_esperada,
+      id_deposito,
+      id_proveedor
+    );
   }
 }
 
@@ -775,6 +819,9 @@ export async function registerOrdenCompra(
           precio_total: orden.getTotal(),
           forma_pago: orden.getFormaPago(),
           saldo: orden.getTotal(),
+          fecha_esperada: orden.getFechaEsperada(), // nuevo
+          id_deposito: orden.getIdDeposito(), // nuevo
+          id_proveedor: orden.getIdProveedor(), // nuevo
         },
       });
       await tx.detalleOrdenCompra.createMany({
@@ -792,71 +839,6 @@ export async function registerOrdenCompra(
     return trans_res.id;
   } catch (err) {
     console.log(`Error @ registerOrdenCompra: ${err}`);
-    return null;
-  }
-}
-
-export async function retrieveOrdenesCompra(): Promise<
-  Array<DBData<OrdenCompraData>>
-> {
-  try {
-    return await prisma.ordenCompra
-      .findMany({ include: { detalle: true } })
-      .then((ordenes) =>
-        ordenes.map((orden) => {
-          return {
-            id: orden.id,
-            data: OrdenCompraData.fromDBEntry({
-              forma_pago: orden.forma_pago,
-              saldo: orden.saldo,
-              total: orden.precio_total,
-              items: orden.detalle.map((item) => {
-                return {
-                  id: item.id,
-                  precio: item.precio,
-                  cantidad: item.cantidad,
-                };
-              }),
-            }),
-          };
-        })
-      );
-  } catch (err) {
-    console.log(`Error @ retrieveOrdenesCompra: ${err}`);
-    return [];
-  }
-}
-
-export async function retrieveOrdenCompra(
-  id: DBId
-): Promise<DBData<OrdenCompraData> | null> {
-  try {
-    return await prisma.ordenCompra
-      .findUniqueOrThrow({
-        where: { id },
-        include: {
-          detalle: true,
-        },
-      })
-      .then((orden) => {
-        return {
-          id: orden.id,
-          data: OrdenCompraData.fromDBEntry({
-            forma_pago: orden.forma_pago,
-            saldo: orden.saldo,
-            total: orden.precio_total,
-            items: orden.detalle.map((item) => {
-              return {
-                id: item.id,
-                precio: item.precio,
-                cantidad: item.cantidad,
-              };
-            }),
-          }),
-        };
-      });
-  } catch (err) {
-    console.log(`Error @ retrieveOrdenCompra: ${err}`);
     return null;
   }
 }
