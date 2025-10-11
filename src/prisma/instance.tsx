@@ -710,13 +710,13 @@ export type ItemOrdenCompra = {
 };
 
 export class OrdenCompraData {
-  private forma_pago: FormaDePago;
-  private saldo: number;
-  private total: number;
-  private items: Array<ItemOrdenCompra>;
-  private fecha_esperada: Date;
-  private id_deposito: DBId;
-  private id_proveedor: DBId;
+  forma_pago: FormaDePago;
+  saldo: number;
+  total: number;
+  items: Array<ItemOrdenCompra>;
+  fecha_esperada: Date;
+  id_deposito: number;
+  id_proveedor: number;
 
   private constructor(
     forma_pago: FormaDePago,
@@ -724,8 +724,8 @@ export class OrdenCompraData {
     total: number,
     items: Array<ItemOrdenCompra>,
     fecha_esperada: Date,
-    id_deposito: DBId,
-    id_proveedor: DBId
+    id_deposito: number,
+    id_proveedor: number
   ) {
     this.forma_pago = forma_pago;
     this.saldo = saldo;
@@ -758,16 +758,22 @@ export class OrdenCompraData {
     return this.id_proveedor;
   }
 
+  getFechaEsperada() {
+    return this.fecha_esperada;
+  }
+  getIdDeposito() {
+    return this.id_deposito;
+  }
+  getIdProveedor() {
+    return this.id_proveedor;
+  }
+
   static fromItems(
     forma_pago: FormaDePago,
     items: Array<ItemOrdenCompra>,
-    extras: {
-      fecha_esperada: Date;
-      id_deposito: DBId;
-      id_proveedor: DBId;
-      saldo?: number;
-      total?: number;
-    }
+    fecha_esperada: Date,
+    id_deposito: number,
+    id_proveedor: number
   ): OrdenCompraData {
     const computedTotal =
       extras.total ??
@@ -781,6 +787,15 @@ export class OrdenCompraData {
       extras.fecha_esperada,
       extras.id_deposito,
       extras.id_proveedor
+    );
+    return new OrdenCompraData(
+      forma_pago,
+      total, //saldo inicial
+      total, //total de la orden
+      items,
+      fecha_esperada,
+      id_deposito,
+      id_proveedor
     );
   }
 
@@ -798,8 +813,8 @@ export class OrdenCompraData {
     total: number;
     items: Array<ItemOrdenCompra>;
     fecha_esperada: Date;
-    id_deposito: DBId;
-    id_proveedor: DBId;
+    id_deposito: number;
+    id_proveedor: number;
   }) {
     return new OrdenCompraData(
       forma_pago,
@@ -822,10 +837,10 @@ export async function registerOrdenCompra(
         data: {
           precio_total: orden.getTotal(),
           forma_pago: orden.getFormaPago(),
-          saldo: orden.getSaldo(),
-          fecha_esperada: orden.getFechaEsperada(),
-          id_deposito: orden.getDepositoId(),
-          id_proveedor: orden.getProveedorId(),
+          saldo: orden.getTotal(),
+          fecha_esperada: orden.getFechaEsperada(), // nuevo
+          id_deposito: orden.getIdDeposito(), // nuevo
+          id_proveedor: orden.getIdProveedor(), // nuevo
         },
       });
       await tx.detalleOrdenCompra.createMany({
@@ -843,77 +858,6 @@ export async function registerOrdenCompra(
     return trans_res.id;
   } catch (err) {
     console.log(`Error @ registerOrdenCompra: ${err}`);
-    return null;
-  }
-}
-
-export async function retrieveOrdenesCompra(): Promise<
-  Array<DBData<OrdenCompraData>>
-> {
-  try {
-    return await prisma.ordenCompra
-      .findMany({ include: { detalle: true } })
-      .then((ordenes) =>
-        ordenes.map((orden) => {
-          return {
-            id: orden.id,
-            data: OrdenCompraData.fromDBEntry({
-              forma_pago: orden.forma_pago,
-              saldo: orden.saldo,
-              total: orden.precio_total,
-              fecha_esperada: orden.fecha_esperada,
-              id_deposito: orden.id_deposito,
-              id_proveedor: orden.id_proveedor,
-              items: orden.detalle.map((item) => {
-                return {
-                  id: item.id_articulo,
-                  precio: item.precio,
-                  cantidad: item.cantidad,
-                };
-              }),
-            }),
-          };
-        })
-      );
-  } catch (err) {
-    console.log(`Error @ retrieveOrdenesCompra: ${err}`);
-    return [];
-  }
-}
-
-export async function retrieveOrdenCompra(
-  id: DBId
-): Promise<DBData<OrdenCompraData> | null> {
-  try {
-    return await prisma.ordenCompra
-      .findUniqueOrThrow({
-        where: { id },
-        include: {
-          detalle: true,
-        },
-      })
-      .then((orden) => {
-        return {
-          id: orden.id,
-          data: OrdenCompraData.fromDBEntry({
-            forma_pago: orden.forma_pago,
-            saldo: orden.saldo,
-            total: orden.precio_total,
-            fecha_esperada: orden.fecha_esperada,
-            id_deposito: orden.id_deposito,
-            id_proveedor: orden.id_proveedor,
-            items: orden.detalle.map((item) => {
-              return {
-                id: item.id_articulo,
-                precio: item.precio,
-                cantidad: item.cantidad,
-              };
-            }),
-          }),
-        };
-      });
-  } catch (err) {
-    console.log(`Error @ retrieveOrdenCompra: ${err}`);
     return null;
   }
 }
