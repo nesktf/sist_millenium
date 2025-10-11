@@ -710,21 +710,30 @@ export type ItemOrdenCompra = {
 };
 
 export class OrdenCompraData {
-  forma_pago: FormaDePago;
-  saldo: number;
-  total: number;
-  items: Array<ItemOrdenCompra>;
+  private forma_pago: FormaDePago;
+  private saldo: number;
+  private total: number;
+  private items: Array<ItemOrdenCompra>;
+  private fecha_esperada: Date;
+  private id_deposito: DBId;
+  private id_proveedor: DBId;
 
   private constructor(
     forma_pago: FormaDePago,
     saldo: number,
     total: number,
-    items: Array<ItemOrdenCompra>
+    items: Array<ItemOrdenCompra>,
+    fecha_esperada: Date,
+    id_deposito: DBId,
+    id_proveedor: DBId
   ) {
     this.forma_pago = forma_pago;
     this.saldo = saldo;
     this.total = total;
     this.items = items;
+    this.fecha_esperada = fecha_esperada;
+    this.id_deposito = id_deposito;
+    this.id_proveedor = id_proveedor;
   }
 
   getFormaPago(): FormaDePago {
@@ -739,29 +748,68 @@ export class OrdenCompraData {
   getItems(): Array<ItemOrdenCompra> {
     return this.items;
   }
+  getFechaEsperada(): Date {
+    return this.fecha_esperada;
+  }
+  getDepositoId(): DBId {
+    return this.id_deposito;
+  }
+  getProveedorId(): DBId {
+    return this.id_proveedor;
+  }
 
   static fromItems(
     forma_pago: FormaDePago,
-    items: Array<ItemOrdenCompra>
+    items: Array<ItemOrdenCompra>,
+    extras: {
+      fecha_esperada: Date;
+      id_deposito: DBId;
+      id_proveedor: DBId;
+      saldo?: number;
+      total?: number;
+    }
   ): OrdenCompraData {
-    let total = items.reduce(
-      (total, curr) => total + curr.precio * curr.cantidad,
-      0
+    const computedTotal =
+      extras.total ??
+      items.reduce((total, curr) => total + curr.precio * curr.cantidad, 0);
+    const computedSaldo = extras.saldo ?? computedTotal;
+    return new OrdenCompraData(
+      forma_pago,
+      computedSaldo,
+      computedTotal,
+      items,
+      extras.fecha_esperada,
+      extras.id_deposito,
+      extras.id_proveedor
     );
-    return new OrdenCompraData(forma_pago, total, total, items);
   }
+
   static fromDBEntry({
     forma_pago,
     saldo,
     total,
     items,
+    fecha_esperada,
+    id_deposito,
+    id_proveedor,
   }: {
     forma_pago: FormaDePago;
     saldo: number;
     total: number;
     items: Array<ItemOrdenCompra>;
+    fecha_esperada: Date;
+    id_deposito: DBId;
+    id_proveedor: DBId;
   }) {
-    return new OrdenCompraData(forma_pago, saldo, total, items);
+    return new OrdenCompraData(
+      forma_pago,
+      saldo,
+      total,
+      items,
+      fecha_esperada,
+      id_deposito,
+      id_proveedor
+    );
   }
 }
 
@@ -774,7 +822,10 @@ export async function registerOrdenCompra(
         data: {
           precio_total: orden.getTotal(),
           forma_pago: orden.getFormaPago(),
-          saldo: orden.getTotal(),
+          saldo: orden.getSaldo(),
+          fecha_esperada: orden.getFechaEsperada(),
+          id_deposito: orden.getDepositoId(),
+          id_proveedor: orden.getProveedorId(),
         },
       });
       await tx.detalleOrdenCompra.createMany({
@@ -810,9 +861,12 @@ export async function retrieveOrdenesCompra(): Promise<
               forma_pago: orden.forma_pago,
               saldo: orden.saldo,
               total: orden.precio_total,
+              fecha_esperada: orden.fecha_esperada,
+              id_deposito: orden.id_deposito,
+              id_proveedor: orden.id_proveedor,
               items: orden.detalle.map((item) => {
                 return {
-                  id: item.id,
+                  id: item.id_articulo,
                   precio: item.precio,
                   cantidad: item.cantidad,
                 };
@@ -845,9 +899,12 @@ export async function retrieveOrdenCompra(
             forma_pago: orden.forma_pago,
             saldo: orden.saldo,
             total: orden.precio_total,
+            fecha_esperada: orden.fecha_esperada,
+            id_deposito: orden.id_deposito,
+            id_proveedor: orden.id_proveedor,
             items: orden.detalle.map((item) => {
               return {
-                id: item.id,
+                id: item.id_articulo,
                 precio: item.precio,
                 cantidad: item.cantidad,
               };
