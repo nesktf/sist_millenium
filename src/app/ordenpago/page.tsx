@@ -2,416 +2,178 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Modal from "@/components/Modal"; // Ajusta la ruta según tu estructura
-
-// --- INTERFACES ---
-interface ComprobanteProveedor {
-  id: number;
-  proveedor: { nombre: string };
-  fecha: string;
-  letra: string;
-  sucursal: string;
-  numero: string;
-  tipo_comprobante: { nombre: string };
-  detalles?: Array<{
-    cantidad: number;
-    precio_unitario: number;
-  }>;
-}
+import RegistrarOrdenPagoModal from "@/components/pagos/RegistrarOrdenPagoModal";
+import DetalleOrdenModal from "@/components/pagos/DetalleOrdenModal";
+import RegistrarPagoModal from "@/components/pagos/RegistrarPagoModal";
+import { formatDateAR } from "@/utils/dateUtils";
 
 interface OrdenPago {
   id: number;
-  id_comprobante: number;
+  numero: string;
   fecha: string;
-  estado: 'PENDIENTE' | 'PAGADO' | 'CANCELADO';
-  cantidad?: number;
-  forma_pago?: string;
-  referencia?: string;
-  responsable?: string;
-  observaciones?: string;
-  comprobante?: ComprobanteProveedor;
+  estado: "PENDIENTE" | "PAGADO" | "CANCELADO";
+  saldo?: number;
+  total: number;
+  proveedor?: {
+    id: number;
+    nombre: string;
+  };
+  comprobante?: {
+    letra: string;
+    sucursal: string;
+    numero: string;
+    proveedor: {
+      nombre: string;
+    };
+  };
 }
 
-// --- COMPONENTE PARA REGISTRAR ORDEN DE PAGO ---
-function RegistrarOrdenPagoModal({
-  isOpen,
-  onClose,
-  comprobantes,
-  onSubmit
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  comprobantes: ComprobanteProveedor[];
-  onSubmit: (data: any) => void;
-}) {
-  const [formData, setFormData] = useState({
-    id_comprobante: '',
-    fecha: new Date().toISOString().split('T')[0],
-    cantidad: '',
-    estado: 'PENDIENTE' as 'PENDIENTE' | 'PAGADO' | 'CANCELADO',
-    forma_pago: 'EFECTIVO',
-    referencia: '',
-    responsable: '',
-    observaciones: '',
-  });
-
-  // Calcular total del comprobante seleccionado
-  const calcularTotal = (idComprobante: string) => {
-    if (!idComprobante) return 0;
-    
-    const comprobante = comprobantes.find(c => c.id === parseInt(idComprobante));
-    if (!comprobante || !comprobante.detalles) return 0;
-    
-    return comprobante.detalles.reduce((total, detalle) => {
-      return total + (detalle.cantidad * detalle.precio_unitario);
-    }, 0);
-  };
-
-  const totalComprobante = calcularTotal(formData.id_comprobante);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    
-    if (name === 'id_comprobante') {
-      // Cuando cambia el comprobante, calcular y actualizar el total automáticamente
-      const total = calcularTotal(value);
-      setFormData({ 
-        ...formData, 
-        [name]: value,
-        cantidad: total ? total.toString() : ''
-      });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.id_comprobante) {
-      alert("Por favor, selecciona un comprobante.");
-      return;
-    }
-    if (!formData.cantidad || Number(formData.cantidad) <= 0) {
-      alert('Ingrese un monto válido');
-      return;
-    }
-    onSubmit({
-      ...formData,
-      id_comprobante: parseInt(formData.id_comprobante),
-      cantidad: formData.cantidad ? Number(formData.cantidad) : null,
-    });
-  };
-
-  const resetForm = () => {
-    setFormData({
-      id_comprobante: '',
-      fecha: new Date().toISOString().split('T')[0],
-      cantidad: '',
-      estado: 'PENDIENTE',
-      forma_pago: 'EFECTIVO',
-      referencia: '',
-      responsable: '',
-      observaciones: '',
-    });
-  };
-
-  useEffect(() => {
-    if (!isOpen) resetForm();
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <Modal onClose={onClose}>
-      <h2 className="text-xl font-bold mb-4">Registrar Orden de Pago</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="form-control w-full">
-          <label className="label">
-            <span className="label-text">Comprobante a Pagar *</span>
-          </label>
-          <select 
-            name="id_comprobante"
-            value={formData.id_comprobante}
-            onChange={handleChange}
-            className="select select-bordered w-full"
-            required
-          >
-            <option value="" disabled>Seleccionar comprobante</option>
-            {comprobantes.map((comp) => (
-              <option key={comp.id} value={comp.id}>
-                {comp.proveedor.nombre} - {comp.letra}-{comp.sucursal}-{comp.numero} ({new Date(comp.fecha).toLocaleDateString()})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-control w-full">
-          <label className="label">
-            <span className="label-text">Fecha de Orden *</span>
-          </label>
-          <input
-            type="date"
-            name="fecha"
-            value={formData.fecha}
-            onChange={handleChange}
-            className="input input-bordered w-full"
-            required
-          />
-        </div>
-
-        <div className="form-control w-full">
-          <label className="label">
-            <span className="label-text">Monto *</span>
-          </label>
-          <input
-            type="number"
-            name="cantidad"
-            min={0}
-            step="0.01"
-            value={formData.cantidad}
-            onChange={handleChange}
-            placeholder="Ingrese el monto a pagar"
-            className="input input-bordered w-full"
-          />
-        </div>
-
-        <div className="form-control w-full">
-          <label className="label">
-            <span className="label-text">Estado</span>
-          </label>
-          <select
-            name="estado"
-            value={formData.estado}
-            onChange={handleChange}
-            className="select select-bordered w-full"
-          >
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="PAGADO">Pagado</option>
-            <option value="CANCELADO">Cancelado</option>
-          </select>
-        </div>
-
-        <div className="form-control w-full">
-          <label className="label">
-            <span className="label-text">Forma de Pago</span>
-          </label>
-          <select
-            name="forma_pago"
-            value={formData.forma_pago}
-            onChange={handleChange}
-            className="select select-bordered w-full"
-          >
-            <option value="EFECTIVO">Efectivo</option>
-            <option value="TRANSFERENCIA">Transferencia</option>
-            <option value="CHEQUE">Cheque</option>
-            <option value="OTRO">Otro</option>
-          </select>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="form-control w-full">
-            <label className="label">
-              <span className="label-text">Referencia / Nº de operación</span>
-            </label>
-            <input
-              type="text"
-              name="referencia"
-              value={formData.referencia}
-              onChange={handleChange}
-              className="input input-bordered w-full"
-              placeholder="Ej: Nº de transferencia"
-            />
-          </div>
-
-          <div className="form-control w-full">
-            <label className="label">
-              <span className="label-text">Responsable</span>
-            </label>
-            <input
-              type="text"
-              name="responsable"
-              value={formData.responsable}
-              onChange={handleChange}
-              className="input input-bordered w-full"
-              placeholder="Quién registra el pago"
-            />
-          </div>
-        </div>
-
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">Observaciones</span>
-          </label>
-          <textarea
-            name="observaciones"
-            value={formData.observaciones}
-            onChange={handleChange}
-            className="textarea textarea-bordered"
-            rows={3}
-            placeholder="Notas adicionales del pago"
-          />
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4">
-          <button type="submit" className="btn btn-primary">
-            Registrar Orden
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
+interface Proveedor {
+  id: number;
+  nombre: string;
 }
 
-// --- COMPONENTE PARA LA TABLA DE ÓRDENES ---
-function OrdenesTable({ 
-  ordenes, 
-  onPagar 
-}: { 
-  ordenes: OrdenPago[];
-  onPagar: (id: number) => void;
-}) {
-  const getEstadoBadge = (estado: string) => {
-    switch (estado) {
-      case 'PENDIENTE':
-        return <span className="badge badge-warning">Pendiente</span>;
-      case 'PAGADO':
-        return <span className="badge badge-success">Pagado</span>;
-      case 'CANCELADO':
-        return <span className="badge badge-error">Cancelado</span>;
-      default:
-        return <span className="badge badge-neutral">{estado}</span>;
-    }
-  };
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="table table-zebra w-full text-base-content">
-        <thead className="bg-base-200">
-          <tr>
-            <th>ID</th>
-            <th>Comprobante</th>
-            <th>Proveedor</th>
-            <th>Fecha Orden</th>
-            <th>Estado</th>
-            <th>Forma Pago</th>
-            <th>Referencia</th>
-            <th>Responsable</th>
-            <th>Cantidad</th>
-            <th className="text-center">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ordenes.length === 0 ? (
-            <tr>
-              <td colSpan={10} className="text-center p-4">
-                No hay órdenes de pago registradas.
-              </td>
-            </tr>
-          ) : (
-            ordenes.map((orden) => (
-              <tr key={orden.id}>
-                <td>{orden.id}</td>
-                <td>
-                  {orden.comprobante ? 
-                    `${orden.comprobante.letra}-${orden.comprobante.sucursal}-${orden.comprobante.numero}` : 
-                    '-'
-                  }
-                </td>
-                <td>{orden.comprobante?.proveedor.nombre || '-'}</td>
-                <td>{new Date(orden.fecha).toLocaleDateString()}</td>
-                <td>{getEstadoBadge(orden.estado)}</td>
-                <td>{orden.forma_pago || '-'}</td>
-                <td>{orden.referencia || '-'}</td>
-                <td>{orden.responsable || '-'}</td>
-                <td className="text-right">
-                  {orden.cantidad ? `$${orden.cantidad.toLocaleString()}` : '-'}
-                </td>
-                <td className="text-center">
-                  {orden.estado === 'PENDIENTE' && (
-                    <button
-                      onClick={() => onPagar(orden.id)}
-                      className="btn btn-success btn-xs"
-                    >
-                      Pagar
-                    </button>
-                  )}
-                  {orden.estado !== 'PENDIENTE' && (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// --- PÁGINA PRINCIPAL ---
 export default function OrdenPagoPage() {
   const [ordenes, setOrdenes] = useState<OrdenPago[]>([]);
-  const [comprobantes, setComprobantes] = useState<ComprobanteProveedor[]>([]);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+
+  // Filtros
+  const [filtroProveedor, setFiltroProveedor] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("");
+
+  // Modales
+  const [showModalRegistrar, setShowModalRegistrar] = useState(false);
+  const [showModalDetalle, setShowModalDetalle] = useState(false);
+  const [showModalPago, setShowModalPago] = useState(false);
+  const [ordenSeleccionada, setOrdenSeleccionada] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
+    fetchProveedores();
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [filtroProveedor, filtroEstado]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch órdenes de pago
-      const ordenesRes = await fetch('/api/v1/orden-pago');
-      if (ordenesRes.ok) {
-        const ordenesData = await ordenesRes.json();
-        setOrdenes(ordenesData);
-      }
+      let url = "/api/v1/orden-pago?";
+      if (filtroProveedor) url += `id_proveedor=${filtroProveedor}&`;
+      if (filtroEstado) url += `estado=${filtroEstado}&`;
 
-      // Fetch comprobantes disponibles (sin orden de pago)
-      const comprobantesRes = await fetch('/api/v1/comprobante-proveedor/sin-orden');
-      if (comprobantesRes.ok) {
-        const comprobantesData = await comprobantesRes.json();
-        setComprobantes(comprobantesData);
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setOrdenes(data);
       }
-      
     } catch (error) {
-      console.error('Error fetching data:', error);
-      alert('Error al cargar los datos');
+      console.error("Error fetching data:", error);
+      alert("Error al cargar los datos");
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchProveedores = async () => {
+    try {
+      const res = await fetch("/api/v1/proveedor");
+      if (res.ok) {
+        const data = await res.json();
+        setProveedores(
+          data.map((p: any) => ({
+            id: p.id,
+            nombre: p.nombre,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching proveedores:", error);
+    }
+  };
+
   const handleRegistrarOrden = async (data: any) => {
     try {
-      const res = await fetch('/api/v1/orden-pago', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+      const res = await fetch("/api/v1/orden-pago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
       });
 
       if (res.ok) {
-        alert('¡Orden de pago registrada con éxito!');
-        setShowModal(false);
-        fetchData(); // Recargar datos
+        alert("¡Orden de pago registrada con éxito!");
+        setShowModalRegistrar(false);
+        fetchData();
       } else {
         const errorData = await res.json();
         alert(`Error al registrar: ${errorData.error}`);
       }
     } catch (error) {
-      alert('Error de conexión al intentar registrar la orden.');
+      alert("Error de conexión al intentar registrar la orden.");
     }
   };
 
-  const handlePagar = (id: number) => {
-    // Placeholder para la funcionalidad de pago
-    alert(`Funcionalidad de pago para la orden ${id} - Por implementar`);
+  const handleVerDetalle = async (id: number) => {
+    try {
+      const res = await fetch(`/api/v1/orden-pago?id=${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrdenSeleccionada(data);
+        setShowModalDetalle(true);
+      }
+    } catch (error) {
+      alert("Error al cargar el detalle");
+    }
+  };
+
+  const handleAbrirModalPago = async (id: number) => {
+    try {
+      const res = await fetch(`/api/v1/orden-pago?id=${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrdenSeleccionada(data);
+        setShowModalPago(true);
+      }
+    } catch (error) {
+      alert("Error al cargar la orden");
+    }
+  };
+
+  const handleRegistrarPago = async (data: any) => {
+    try {
+      const res = await fetch("/api/v1/historial-pagos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        alert("¡Pago registrado con éxito!");
+        setShowModalPago(false);
+        setOrdenSeleccionada(null);
+        fetchData();
+      } else {
+        const errorData = await res.json();
+        alert(`Error al registrar el pago: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert("Error de conexión al intentar registrar el pago.");
+    }
+  };
+
+  const getEstadoBadge = (estado: string) => {
+    switch (estado) {
+      case "PENDIENTE":
+        return <span className="badge badge-warning">Pendiente</span>;
+      case "PAGADO":
+        return <span className="badge badge-info">En Pago</span>;
+      case "CANCELADO":
+        return <span className="badge badge-success">Pagado Completo</span>;
+      default:
+        return <span className="badge badge-neutral">{estado}</span>;
+    }
   };
 
   if (loading) {
@@ -425,31 +187,183 @@ export default function OrdenPagoPage() {
   return (
     <div>
       <main style={{ padding: "2rem" }}>
-        <div className="mb-4 flex flex-wrap gap-3">
-          <Link href="/proveedor" className="btn btn-outline btn-sm">
-            Volver a proveedores
-          </Link>
-          <button 
-            onClick={() => setShowModal(true)}
-            className="btn btn-primary btn-sm"
-          >
-            Registrar Orden de Pago
-          </button>
+        {/* Encabezado y acciones */}
+        <div className="mb-4 flex flex-wrap gap-3 items-center justify-between">
+          <div className="flex gap-3">
+            <Link href="/proveedor" className="btn btn-outline btn-sm">
+              Volver a Proveedores
+            </Link>
+            <button
+              onClick={() => setShowModalRegistrar(true)}
+              className="btn btn-primary btn-sm"
+            >
+              Registrar Orden de Pago
+            </button>
+          </div>
         </div>
 
-        <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}>
-          Órdenes de Pago
-        </h1>
-        
-        <div className="bg-base-100 rounded-lg shadow p-4">
-          <OrdenesTable ordenes={ordenes} onPagar={handlePagar} />
+        <h1 className="text-2xl font-bold mb-4">Órdenes de Pago</h1>
+
+        {/* Filtros */}
+        <div className="bg-base-200 p-4 rounded-lg mb-4">
+          <h3 className="font-bold mb-3">Filtros</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Proveedor</span>
+              </label>
+              <select
+                value={filtroProveedor}
+                onChange={(e) => setFiltroProveedor(e.target.value)}
+                className="select select-bordered select-sm"
+              >
+                <option value="">Todos los proveedores</option>
+                {proveedores.map((prov) => (
+                  <option key={prov.id} value={prov.id}>
+                    {prov.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Estado</span>
+              </label>
+              <select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                className="select select-bordered select-sm"
+              >
+                <option value="">Todos los estados</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="PAGADO">En Pago</option>
+                <option value="CANCELADO">Pagado Completo</option>
+              </select>
+            </div>
+
+            <div className="form-control flex justify-end">
+              <label className="label">
+                <span className="label-text">&nbsp;</span>
+              </label>
+              <button
+                onClick={() => {
+                  setFiltroProveedor("");
+                  setFiltroEstado("");
+                }}
+                className="btn btn-ghost btn-sm"
+              >
+                Limpiar Filtros
+              </button>
+            </div>
+          </div>
         </div>
 
+        {/* Tabla de órdenes */}
+        <div className="bg-base-100 rounded-lg shadow overflow-x-auto">
+          <table className="table table-zebra w-full">
+            <thead className="bg-base-200">
+              <tr>
+                <th>Número</th>
+                <th>Comprobante</th>
+                <th>Proveedor</th>
+                <th>Fecha</th>
+                <th>Total</th>
+                <th>Saldo</th>
+                <th>Estado</th>
+                <th className="text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ordenes.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center p-4">
+                    No hay órdenes de pago registradas con los filtros
+                    seleccionados.
+                  </td>
+                </tr>
+              ) : (
+                ordenes.map((orden) => (
+                  <tr key={orden.id}>
+                    <td className="font-semibold">{orden.numero}</td>
+                    <td>
+                      {orden.comprobante
+                        ? `${orden.comprobante.letra}-${orden.comprobante.sucursal}-${orden.comprobante.numero}`
+                        : "-"}
+                    </td>
+                    <td>
+                      {orden.proveedor?.nombre ||
+                        orden.comprobante?.proveedor?.nombre ||
+                        "-"}
+                    </td>
+                    <td>{new Date(orden.fecha).toLocaleDateString()}</td>
+                    <td className="text-right">
+                      ${orden.total?.toLocaleString() || 0}
+                    </td>
+                    <td className="text-right">
+                      <span
+                        className={
+                          orden.saldo === 0
+                            ? "text-success font-bold"
+                            : "text-warning font-bold"
+                        }
+                      >
+                        ${orden.saldo?.toLocaleString() || 0}
+                      </span>
+                    </td>
+                    <td>{getEstadoBadge(orden.estado)}</td>
+                    <td className="text-center">
+                      <div className="flex gap-1 justify-center">
+                        <button
+                          onClick={() => handleVerDetalle(orden.id)}
+                          className="btn btn-info btn-xs"
+                          title="Ver Detalle"
+                        >
+                          Ver
+                        </button>
+                        {(orden.estado === "PENDIENTE" || orden.estado === "PAGADO") && orden.saldo! > 0 && (
+                          <button
+                            onClick={() => handleAbrirModalPago(orden.id)}
+                            className="btn btn-success btn-xs"
+                            title="Registrar Pago"
+                          >
+                            Pagar
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Modales */}
         <RegistrarOrdenPagoModal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          comprobantes={comprobantes}
+          isOpen={showModalRegistrar}
+          onClose={() => setShowModalRegistrar(false)}
+          proveedores={proveedores}
           onSubmit={handleRegistrarOrden}
+        />
+
+        <DetalleOrdenModal
+          isOpen={showModalDetalle}
+          onClose={() => {
+            setShowModalDetalle(false);
+            setOrdenSeleccionada(null);
+          }}
+          orden={ordenSeleccionada}
+        />
+
+        <RegistrarPagoModal
+          isOpen={showModalPago}
+          onClose={() => {
+            setShowModalPago(false);
+            setOrdenSeleccionada(null);
+          }}
+          orden={ordenSeleccionada}
+          onSubmit={handleRegistrarPago}
         />
       </main>
     </div>

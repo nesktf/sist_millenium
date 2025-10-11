@@ -159,6 +159,14 @@ export default function Sidebar() {
                   Registrar Orden de Pago
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/historial-pagos"
+                  className="block px-2 py-1 rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
+                >
+                  Ver historial de pagos
+                </Link>
+              </li>
             </ul>
           )}
         </div>
