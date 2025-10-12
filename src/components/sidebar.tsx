@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 
+
 export default function Sidebar() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const toggleMenu = (menu: string) =>
     setOpenMenu(openMenu === menu ? null : menu);
 
   return (
-    <div className="w-64 h-screen bg-gray-900 text-white shadow-lg flex flex-col">
+    <div className="fixed left-0 top-0 w-64 h-screen bg-gray-900 text-white shadow-lg flex flex-col">
       {/* Logo */}
       <div className="px-6 py-4 border-b border-gray-700">
         <h2 className="text-2xl font-bold tracking-wide">Millenium</h2>
@@ -17,6 +18,16 @@ export default function Sidebar() {
 
       {/* Menú */}
       <nav className="flex-1 overflow-y-auto px-2 py-4">
+        {/* Ecommerce */}
+        <div className="mb-4">
+          <Link
+            href="/e-commerce"
+            className="block px-4 py-2 text-left font-semibold rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
+          >
+            E-commerce
+          </Link>
+        </div>
+
         {/* Gestión de Depósitos */}
         <div className="mb-4">
           <button
@@ -138,6 +149,14 @@ export default function Sidebar() {
                   className="block px-2 py-1 rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
                 >
                   Registrar Orden de Pago
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/historial-pagos"
+                  className="block px-2 py-1 rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
+                >
+                  Ver historial de pagos
                 </Link>
               </li>
             </ul>
