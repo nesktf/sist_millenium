@@ -122,9 +122,12 @@ export default function CartPage() {
                 <span>${formatCurrency(cartTotal)}</span>
               </div>
               <div className="card-actions justify-end mt-4">
-                <button className="btn btn-primary w-full">
+                <Link
+                  href="/carrito/checkout"
+                  className="btn btn-primary w-full text-center"
+                >
                   Proceder al Pago
-                </button>
+                </Link>
                 <button
                   onClick={clearCart}
                   className="btn btn-outline btn-sm w-full mt-2"
