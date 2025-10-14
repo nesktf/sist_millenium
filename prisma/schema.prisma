@@ -195,6 +195,11 @@ enum FormaDePago {
   TRANSFERENCIA
 }
 
+enum MetodoPagoCliente {
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+}
+
 model DetalleOrdenCompra {
   id          Int @id @default(autoincrement())
   id_orden    Int
@@ -246,11 +251,16 @@ model CarritoUser {
 }
 
 model VentaArticulo {
-  id      Int      @id @default(autoincrement())
-  numero  String
-  total   Int
-  fecha   DateTime
-  id_user Int?
+  id                Int                @id @default(autoincrement())
+  numero            String
+  total             Int
+  fecha             DateTime
+  id_user           Int?
+  metodo_pago       MetodoPagoCliente
+  nombre_contacto   String
+  apellido_contacto String
+  correo_contacto   String
+  telefono_contacto String
 
   detalle DetalleVentaArticulo[]
 
