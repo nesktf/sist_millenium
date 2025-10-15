@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
+
 export default function Sidebar() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const toggleMenu = (menu: string) =>
@@ -156,6 +157,14 @@ export default function Sidebar() {
                   className="block px-2 py-1 rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
                 >
                   Registrar Orden de Pago
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/historial-pagos"
+                  className="block px-2 py-1 rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
+                >
+                  Ver historial de pagos
                 </Link>
               </li>
             </ul>

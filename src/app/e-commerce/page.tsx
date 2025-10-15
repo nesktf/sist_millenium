@@ -1,11 +1,11 @@
 // src/pages/ECommercePage.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { ProductGrid } from "@/components/ProductGrid";
-import { Cart } from "@/components/Cart";
 import { Footer } from "@/components/Footer";
+import { useCart } from "@/context/CartContext";
 
 export interface ArticuloFrontend {
   id: number;
@@ -18,9 +18,9 @@ export interface ArticuloFrontend {
 }
 
 export default function ECommercePage() {
-  const [cart, setCart] = useState<ArticuloFrontend[]>([]);
   const [articulos, setArticulos] = useState<ArticuloFrontend[]>([]);
   const [searchTerm, setSearchTerm] = useState(""); // estado para el texto de búsqueda
+  const { addToCart, itemCount } = useCart();
 
   useEffect(() => {
     fetch("/api/v1/prod") // apunta a tu endpoint GET
@@ -29,11 +29,17 @@ export default function ECommercePage() {
   }, []);
 
   const handleAddToCart = (articulo: ArticuloFrontend) => {
-    setCart((prev) => [...prev, articulo]);
-  };
+    const precio =
+      articulo.precio !== undefined && articulo.precio !== null
+        ? Number(articulo.precio)
+        : 0;
 
-  const handleRemove = (id: number) => {
-    setCart((prev) => prev.filter((a) => a.id !== id));
+    addToCart({
+      id: articulo.id,
+      nombre: articulo.nombre,
+      precio,
+      imagenUrl: articulo.imagen ? `/images/${articulo.imagen}` : undefined,
+    });
   };
 
   const filteredArticulos = articulos.filter((a) =>
@@ -41,7 +47,7 @@ export default function ECommercePage() {
   );
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header cartCount={cart.length} />
+      <Header cartCount={itemCount} />
 
       <main className="flex-1 container mx-auto mt-12">
         <div className="px-6 mb-8 flex justify-end">

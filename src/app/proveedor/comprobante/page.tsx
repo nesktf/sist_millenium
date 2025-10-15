@@ -14,6 +14,12 @@ interface DetalleComprobante {
   observacion?: string;
 }
 
+interface TipoComprobanteProveedor {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+}
+
 // --- COMPONENTE PARA LA TABLA DE DETALLES ---
 function ProvComprTable({ detalles, onDelete }: { detalles: DetalleComprobante[], onDelete: (index: number) => void }) {
   return (
@@ -56,16 +62,31 @@ function ProvComprTable({ detalles, onDelete }: { detalles: DetalleComprobante[]
 export default function ComprProveedorPage() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [articulos, setArticulos] = useState<Articulo[]>([]);
+  const [tiposComprobante, setTiposComprobante] = useState<TipoComprobanteProveedor[]>([]);
   const [detalles, setDetalles] = useState<DetalleComprobante[]>([]);
-  const [headerData, setHeaderData] = useState({ numero: '', fecha: '', letra: 'A', id_proveedor: '' });
+  const [headerData, setHeaderData] = useState({
+    numero: '',
+    fecha: '',
+    letra: 'A',
+    sucursal: '',
+    id_proveedor: '',
+    id_tipo_comprobante: '',
+  });
   const [detalleData, setDetalleData] = useState({ id_articulo: '', articulo_nombre: '', observacion: '', cantidad: "", precio_unitario: "" });
+
+  const totalActual = detalles.reduce((acc, detalle) => acc + detalle.cantidad * detalle.precio_unitario, 0);
 
   useEffect(() => {
     async function fetchData() {
-      const provRes = await fetch('/api/v1/proveedor');
+      const [provRes, artRes, tiposRes] = await Promise.all([
+        fetch('/api/v1/proveedor'),
+        fetch('/api/v1/prod'),
+        fetch('/api/v1/comprobante-proveedor'),
+      ]);
+
       if (provRes.ok) setProveedores(await provRes.json());
-      const artRes = await fetch('/api/v1/prod');
       if (artRes.ok) setArticulos(await artRes.json());
+      if (tiposRes.ok) setTiposComprobante(await tiposRes.json());
     }
     fetchData();
   }, []);
@@ -111,8 +132,8 @@ export default function ComprProveedorPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!window.confirm("¿Estás seguro de que deseas guardar este comprobante?")) return;
-    if (!headerData.id_proveedor || detalles.length === 0) {
-      alert("Por favor, selecciona un proveedor y agrega al menos un artículo.");
+    if (!headerData.id_proveedor || !headerData.id_tipo_comprobante || !headerData.sucursal || detalles.length === 0) {
+      alert("Selecciona proveedor, tipo de comprobante, sucursal y agrega al menos un artículo.");
       return;
     }
     try {
@@ -121,13 +142,14 @@ export default function ComprProveedorPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...headerData, detalles })
       });
+      const payload = await res.json();
       if (res.ok) {
-        alert("¡Comprobante guardado con éxito!");
-        setHeaderData({ numero: '', fecha: '', letra: 'A', id_proveedor: '' });
+        const totalRespuesta = typeof payload?.total === 'number' ? payload.total : totalActual;
+        alert(`¡Comprobante guardado con éxito! Total: $${totalRespuesta}`);
+        setHeaderData({ numero: '', fecha: '', letra: 'A', sucursal: '', id_proveedor: '', id_tipo_comprobante: '' });
         setDetalles([]);
       } else {
-        const errorData = await res.json();
-        alert(`Error al guardar: ${errorData.error}`);
+        alert(`Error al guardar: ${payload?.error || 'Intenta nuevamente'}`);
       }
     } catch (error) {
       alert("Error de conexión al intentar guardar.");
@@ -167,11 +189,40 @@ export default function ComprProveedorPage() {
                 </select>
               </div>
               <div className="form-control w-full">
+                <label htmlFor="sucursal" className="label py-1"><span className="label-text">Sucursal</span></label>
+                <input
+                  id="sucursal"
+                  name="sucursal"
+                  value={headerData.sucursal}
+                  onChange={handleHeaderChange}
+                  placeholder="0001"
+                  className="input input-sm input-bordered w-full"
+                />
+              </div>
+              <div className="form-control w-full">
                 <label htmlFor="id_proveedor" className="label py-1"><span className="label-text">Proveedor</span></label>
                 <select id="id_proveedor" name="id_proveedor" value={headerData.id_proveedor} onChange={handleHeaderChange} className="select select-sm select-bordered w-full" required>
                   <option value="" disabled>Seleccionar proveedor</option>
                   {proveedores.map((prov) => (
                     <option key={prov.id} value={prov.id}>{prov.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-control w-full">
+                <label htmlFor="id_tipo_comprobante" className="label py-1"><span className="label-text">Tipo de Comprobante</span></label>
+                <select
+                  id="id_tipo_comprobante"
+                  name="id_tipo_comprobante"
+                  value={headerData.id_tipo_comprobante}
+                  onChange={handleHeaderChange}
+                  className="select select-sm select-bordered w-full"
+                  required
+                >
+                  <option value="" disabled>Seleccionar tipo</option>
+                  {tiposComprobante.map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.nombre}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -207,6 +258,10 @@ export default function ComprProveedorPage() {
           </div>
 
           <ProvComprTable detalles={detalles} onDelete={handleDeleteDetalle} />
+
+          <div className="flex justify-end mt-2">
+            <span className="text-lg font-semibold">Total actual: ${totalActual.toFixed(2)}</span>
+          </div>
           
           <button type="submit" className="btn btn-primary mt-3">Guardar Comprobante</button>
         </form>
