@@ -768,6 +768,16 @@ export class OrdenCompraData {
     return this.id_proveedor;
   }
 
+  getFechaEsperada() {
+    return this.fecha_esperada;
+  }
+  getIdDeposito() {
+    return this.id_deposito;
+  }
+  getIdProveedor() {
+    return this.id_proveedor;
+  }
+
   static fromItems(
     forma_pago: FormaDePago,
     items: Array<ItemOrdenCompra>,
@@ -787,6 +797,15 @@ export class OrdenCompraData {
       extras.fecha_esperada,
       extras.id_deposito,
       extras.id_proveedor
+    );
+    return new OrdenCompraData(
+      forma_pago,
+      total, //saldo inicial
+      total, //total de la orden
+      items,
+      fecha_esperada,
+      id_deposito,
+      id_proveedor
     );
     return new OrdenCompraData(
       forma_pago,

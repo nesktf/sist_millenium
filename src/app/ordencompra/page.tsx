@@ -17,7 +17,6 @@ type ArticuloEntry = {
 export default function OrdenCompraPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [articulos, setArticulos] = useState<Array<ArticuloData>>([]);
-  const [proveedores, setProveedores] = useState<Array<ProveedorData>>([]);
   const [currEntry, setCurrEntry] = useState<ArticuloEntry>({
     articulo: { id: 0, nombre: "" },
     precio: 0,
@@ -120,7 +119,7 @@ export default function OrdenCompraPage() {
       alert("Coloca un precio mayor a 0");
       return;
     }
-    if (currEntry.cantidad <= 0) {
+    if (currEntry.cantidad == 0) {
       alert("Coloca una cantidad mayor a 0");
       return;
     }
@@ -226,99 +225,6 @@ export default function OrdenCompraPage() {
           </h1>
         </div>
 
-        <div className="p-3 border rounded-md space-y-3">
-          <h2 className="text-lg font-semibold mb-1">Datos generales</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-            <div className="form-control w-full">
-              <label htmlFor="numero" className="label py-1"><span className="label-text">Número de orden</span></label>
-              <input
-                id="numero"
-                name="numero"
-                value={ordenInfo.numero}
-                onChange={handleOrdenInfoChange}
-                className="input input-sm input-bordered w-full"
-                placeholder="OC-0001"
-              />
-            </div>
-            <div className="form-control w-full">
-              <label htmlFor="fechaEmision" className="label py-1"><span className="label-text">Fecha de emisión</span></label>
-              <input
-                id="fechaEmision"
-                name="fechaEmision"
-                type="date"
-                value={ordenInfo.fechaEmision}
-                onChange={handleOrdenInfoChange}
-                className="input input-sm input-bordered w-full"
-              />
-            </div>
-            <div className="form-control w-full">
-              <label htmlFor="fechaEntrega" className="label py-1"><span className="label-text">Fecha estimada de entrega</span></label>
-              <input
-                id="fechaEntrega"
-                name="fechaEntrega"
-                type="date"
-                value={ordenInfo.fechaEntrega}
-                onChange={handleOrdenInfoChange}
-                className="input input-sm input-bordered w-full"
-              />
-            </div>
-            <div className="form-control w-full">
-              <label htmlFor="proveedorId" className="label py-1"><span className="label-text">Proveedor</span></label>
-              <select
-                id="proveedorId"
-                name="proveedorId"
-                value={ordenInfo.proveedorId}
-                onChange={handleOrdenInfoChange}
-                className="select select-sm select-bordered w-full"
-                disabled={loading || proveedores.length === 0}
-              >
-                <option value="" disabled>
-                  {loading ? "Cargando..." : "Seleccionar proveedor"}
-                </option>
-                {proveedores.map((prov) => (
-                  <option key={prov.id} value={prov.id}>
-                    {prov.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-control w-full">
-              <label htmlFor="responsable" className="label py-1"><span className="label-text">Responsable</span></label>
-              <input
-                id="responsable"
-                name="responsable"
-                value={ordenInfo.responsable}
-                onChange={handleOrdenInfoChange}
-                className="input input-sm input-bordered w-full"
-                placeholder="Nombre del responsable"
-              />
-            </div>
-            <div className="form-control w-full">
-              <label htmlFor="condicionesPago" className="label py-1"><span className="label-text">Condiciones de pago</span></label>
-              <input
-                id="condicionesPago"
-                name="condicionesPago"
-                value={ordenInfo.condicionesPago}
-                onChange={handleOrdenInfoChange}
-                className="input input-sm input-bordered w-full"
-                placeholder="Ej: 30 días, contado, etc."
-              />
-            </div>
-            <div className="form-control md:col-span-2">
-              <label htmlFor="observaciones" className="label py-1"><span className="label-text">Observaciones</span></label>
-              <textarea
-                id="observaciones"
-                name="observaciones"
-                rows={3}
-                value={ordenInfo.observaciones}
-                onChange={handleOrdenInfoChange}
-                className="textarea textarea-bordered"
-                placeholder="Notas adicionales para el proveedor"
-              />
-            </div>
-          </div>
-        </div>
-
         <div className="p-3 border rounded-md">
           <h2 className="text-lg font-semibold mb-2">Datos de la orden</h2>
           <div className="form-control w-full">
@@ -399,7 +305,7 @@ export default function OrdenCompraPage() {
               <select
                 id="id_articulo"
                 name="id_articulo"
-                value={currEntry.articulo.id || ""}
+                value={currEntry.articulo.id}
                 onChange={handleEntryChange}
                 className="select select-sm select-bordered w-full"
               >
@@ -423,7 +329,7 @@ export default function OrdenCompraPage() {
                 name="cantidad"
                 type="number"
                 min={0}
-                value={currEntry.cantidad || ""}
+                value={currEntry.cantidad}
                 onChange={handleEntryChange}
                 placeholder="0"
                 className="input input-sm input-bordered w-full"
@@ -439,7 +345,7 @@ export default function OrdenCompraPage() {
                 name="precio"
                 type="number"
                 min={0}
-                value={currEntry.precio || ""}
+                value={currEntry.precio}
                 onChange={handleEntryChange}
                 placeholder="0"
                 className="input input-sm input-bordered w-full"
@@ -511,7 +417,7 @@ export default function OrdenCompraPage() {
           </h1>
         </div>
         <button
-          type="button"
+          type="submit"
           className="btn btn-primary mt-3"
           onClick={handleSubmit}
         >
