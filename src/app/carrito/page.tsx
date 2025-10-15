@@ -7,13 +7,8 @@ import Image from "next/image"; // Usaremos next/image para optimizar las imáge
 
 export default function CartPage() {
   // Obtenemos todos los datos y funciones del contexto del carrito
-  const {
-    cartItems,
-    cartTotal,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-  } = useCart();
+  const { cartItems, cartTotal, updateQuantity, removeFromCart, clearCart } =
+    useCart();
 
   const formatCurrency = (value: number | undefined) =>
     Number(value ?? 0).toFixed(2);
@@ -122,9 +117,12 @@ export default function CartPage() {
                 <span>${formatCurrency(cartTotal)}</span>
               </div>
               <div className="card-actions justify-end mt-4">
-                <button className="btn btn-primary w-full">
+                <Link
+                  href="/carrito/checkout"
+                  className="btn btn-primary w-full text-center"
+                >
                   Proceder al Pago
-                </button>
+                </Link>
                 <button
                   onClick={clearCart}
                   className="btn btn-outline btn-sm w-full mt-2"
