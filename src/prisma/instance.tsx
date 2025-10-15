@@ -87,6 +87,7 @@ export async function retrieveArticulos() {
       include: {
         marca: true,
         categoria: true,
+        precios_venta: true, // <-- incluimos los precios
       },
     })
     .then((entries) => {
@@ -102,6 +103,7 @@ export async function retrieveArticulos() {
           data: data,
           marca: entry.marca,
           categoria: entry.categoria,
+          precios_venta: entry.precios_venta, // <-- guardamos los precios
         };
       });
     });

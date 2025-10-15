@@ -15,6 +15,8 @@ export async function GET(req: Request) {
     return NextResponse.json(
       prods.map((prod) => {
         let data: ArticuloData = prod.data;
+        const precio =
+          prod.precios_venta.length > 0 ? prod.precios_venta[0].precio : null;
         return {
           codigo: data.getCodigo(),
           nombre: data.getNombre(),
@@ -22,6 +24,7 @@ export async function GET(req: Request) {
           marca: prod.marca,
           categoria: prod.categoria,
           imagen: `${data.getNombre()}.jpeg`, // construimos el nombre de la imagen
+          precio: precio, // <-- agregamos precio
         };
       })
     );
