@@ -106,6 +106,14 @@ export default function Sidebar() {
                   Registrar Orden de Compra
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/orden-compra-table"
+                  className="block px-2 py-1 rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
+                >
+                  Ver Orden de Compra
+                </Link>
+              </li>
             </ul>
           )}
         </div>
