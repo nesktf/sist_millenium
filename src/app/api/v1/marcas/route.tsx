@@ -1,6 +1,7 @@
-// app/api/v1/marcas/route.tsx
+"use server";
+
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/app/prisma";
+import { prisma } from "@/prisma/instance";
 
 export async function GET() {
   const marcas = await prisma.marcaArticulo.findMany({

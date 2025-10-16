@@ -1,37 +1,22 @@
-// /api/v1/comprobante-proveedor/sin-orden/route.ts
 import { NextResponse } from "next/server";
-import prisma from "@/app/prisma";
+import {
+  retrieveComprobantesSinOrden,
+  retrieveComprobantesByProveedor,
+} from "@/prisma/pagos";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // Obtener comprobantes que NO tienen orden de pago asociada
-    const comprobantes = await prisma.comprobanteProveedor.findMany({
-      where: {
-        orden_pago: null // Solo comprobantes sin orden de pago
-      },
-      include: {
-        proveedor: {
-          select: {
-            nombre: true
-          }
-        },
-        tipo_comprobante: {
-          select: {
-            nombre: true
-          }
-        },
-        detalles: {
-          select: {
-            cantidad: true,
-            precio_unitario: true
-          }
-        }
-      },
-      orderBy: {
-        fecha: 'desc'
-      }
-    });
+    const { searchParams } = new URL(req.url);
+    const id_proveedor = searchParams.get("id_proveedor");
 
+    if (id_proveedor) {
+      const comprobantes = await retrieveComprobantesByProveedor(
+        parseInt(id_proveedor)
+      );
+      return NextResponse.json(comprobantes);
+    }
+
+    const comprobantes = await retrieveComprobantesSinOrden();
     return NextResponse.json(comprobantes);
   } catch (error) {
     console.error("Error al obtener comprobantes sin orden:", error);

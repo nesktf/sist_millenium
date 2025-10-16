@@ -1,3 +1,5 @@
+"use server";
+
 import { NextResponse } from "next/server";
 import {
   ArticuloData,
@@ -5,7 +7,7 @@ import {
   registerArticulo,
   updateArticulo,
   deleteArticulo,
-} from "@/app/prisma";
+} from "@/prisma/instance";
 
 // Devolver productos
 export async function GET(req: Request) {
@@ -13,12 +15,16 @@ export async function GET(req: Request) {
     return NextResponse.json(
       prods.map((prod) => {
         let data: ArticuloData = prod.data;
+        const precio =
+          prod.precios_venta.length > 0 ? prod.precios_venta[0].precio : null;
         return {
           codigo: data.getCodigo(),
           nombre: data.getNombre(),
           id: prod.id,
           marca: prod.marca,
           categoria: prod.categoria,
+          imagen: `${data.getNombre()}.jpeg`, // construimos el nombre de la imagen
+          precio: precio, // <-- agregamos precio
         };
       })
     );

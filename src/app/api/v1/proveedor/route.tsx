@@ -1,3 +1,5 @@
+"use server";
+
 import { NextResponse } from "next/server";
 import {
   ProveedorData,
@@ -5,7 +7,7 @@ import {
   registerProveedor,
   updateProveedor,
   deleteProveedor,
-} from "@/app/prisma";
+} from "@/prisma/instance";
 
 // Devolver productos
 export async function GET(req: Request) {

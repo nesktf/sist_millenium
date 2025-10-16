@@ -1,3 +1,5 @@
+"use server";
+
 import { NextResponse } from "next/server";
 import {
   DepositoDatas,
@@ -5,7 +7,7 @@ import {
   registerDepositos,
   updateDeposito,
   deleteDeposito,
-} from "@/app/prisma";
+} from "@/prisma/instance";
 
 // Devolver productos
 export async function GET(req: Request) {
