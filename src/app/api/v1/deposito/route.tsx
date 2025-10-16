@@ -145,6 +145,7 @@ async function getDepositos() {
     depositos: depos.map((depo) => {
       return {
         id_deposito: depo.id,
+        nombre: depo.data.getNombre(),
         direccion: depo.data.getDireccion(),
         capacidad: depo.data.getCap(),
       };
