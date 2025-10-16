@@ -24,7 +24,7 @@ const PAYMENT_METHODS: PaymentMethodOption[] = [
 ];
 
 const CARD_PAYMENT_METHODS = new Set(
-  PAYMENT_METHODS.map(method => method.id),
+  PAYMENT_METHODS.map((method) => method.id)
 );
 
 const EMPTY_FORM_STATE = {
@@ -158,8 +158,8 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedPaymentMethod = useMemo(
-    () => PAYMENT_METHODS.find(method => method.id === formState.metodoPago),
-    [formState.metodoPago],
+    () => PAYMENT_METHODS.find((method) => method.id === formState.metodoPago),
+    [formState.metodoPago]
   );
 
   const formatCurrency = (value: number | undefined) =>
@@ -171,9 +171,9 @@ export default function CheckoutPage() {
     () =>
       cartItems.reduce(
         (sum, item) => sum + Number(item.precio ?? 0) * item.quantity,
-        0,
+        0
       ),
-    [cartItems],
+    [cartItems]
   );
 
   const handleChange = (field: FormField, value: string) => {
@@ -184,7 +184,7 @@ export default function CheckoutPage() {
       setErrorMessage(null);
     }
 
-    setFormErrors(prev => {
+    setFormErrors((prev) => {
       const next = { ...prev };
       if (field in next) {
         delete next[field];
@@ -199,7 +199,7 @@ export default function CheckoutPage() {
     });
 
     if (field === "metodoPago") {
-      setFormState(prev => ({
+      setFormState((prev) => ({
         ...prev,
         metodoPago: value,
         ...(CARD_PAYMENT_METHODS.has(value)
@@ -218,12 +218,12 @@ export default function CheckoutPage() {
       field === "numeroTarjeta"
         ? formatCardNumber(value)
         : field === "vencimiento"
-          ? formatExpiry(value)
-          : field === "cvv"
-            ? formatCVV(value)
-            : value;
+        ? formatExpiry(value)
+        : field === "cvv"
+        ? formatCVV(value)
+        : value;
 
-    setFormState(prev => ({
+    setFormState((prev) => ({
       ...prev,
       [field]: nextValue,
     }));
@@ -246,7 +246,7 @@ export default function CheckoutPage() {
     });
 
     if (Object.keys(nextErrors).length > 0) {
-      setFormErrors(prev => ({ ...prev, ...nextErrors }));
+      setFormErrors((prev) => ({ ...prev, ...nextErrors }));
     }
     if (cartErrorMessage) {
       setErrorMessage(cartErrorMessage);
@@ -280,12 +280,12 @@ export default function CheckoutPage() {
 
     const sanitizedPhoneValue = sanitizePhone(trimmedTelefono);
     const sanitizedCardNumberValue = sanitizeCardNumber(
-      formState.numeroTarjeta,
+      formState.numeroTarjeta
     ).slice(0, CARD_DIGITS_LENGTH);
     const sanitizedCvvValue = sanitizeCVV(formState.cvv);
 
     const payload = {
-      cartItems: cartItems.map(item => ({
+      cartItems: cartItems.map((item) => ({
         id: item.id,
         nombre: item.nombre,
         precio: Number(item.precio ?? 0),
@@ -326,7 +326,7 @@ export default function CheckoutPage() {
       }
 
       setStatusMessage(
-        `Pedido registrado correctamente. Número de orden: ${data.numero}.`,
+        `Pedido registrado correctamente. Número de orden: ${data.numero}.`
       );
       clearCart();
       setFormState(createInitialFormState());
@@ -351,7 +351,7 @@ export default function CheckoutPage() {
         <p className="text-base-content/70">
           Agregá productos para continuar con el proceso de compra.
         </p>
-        <Link href="/" className="btn btn-primary">
+        <Link href="/e-commerce" className="btn btn-primary">
           Volver a la tienda
         </Link>
       </div>
@@ -386,10 +386,14 @@ export default function CheckoutPage() {
                   <input
                     required
                     value={formState.nombre}
-                    onChange={event => handleChange("nombre", event.target.value)}
+                    onChange={(event) =>
+                      handleChange("nombre", event.target.value)
+                    }
                     className="input input-bordered w-full"
                     aria-invalid={Boolean(formErrors.nombre)}
-                    aria-describedby={formErrors.nombre ? "nombre-error" : undefined}
+                    aria-describedby={
+                      formErrors.nombre ? "nombre-error" : undefined
+                    }
                     placeholder="Juan"
                   />
                   {formErrors.nombre ? (
@@ -403,12 +407,14 @@ export default function CheckoutPage() {
                   <input
                     required
                     value={formState.apellido}
-                    onChange={event =>
+                    onChange={(event) =>
                       handleChange("apellido", event.target.value)
                     }
                     className="input input-bordered w-full"
                     aria-invalid={Boolean(formErrors.apellido)}
-                    aria-describedby={formErrors.apellido ? "apellido-error" : undefined}
+                    aria-describedby={
+                      formErrors.apellido ? "apellido-error" : undefined
+                    }
                     placeholder="Pérez"
                   />
                   {formErrors.apellido ? (
@@ -425,12 +431,14 @@ export default function CheckoutPage() {
                     type="email"
                     required
                     value={formState.correo}
-                    onChange={event =>
+                    onChange={(event) =>
                       handleChange("correo", event.target.value)
                     }
                     className="input input-bordered w-full"
                     aria-invalid={Boolean(formErrors.correo)}
-                    aria-describedby={formErrors.correo ? "correo-error" : undefined}
+                    aria-describedby={
+                      formErrors.correo ? "correo-error" : undefined
+                    }
                     placeholder="tu@email.com"
                   />
                   {formErrors.correo ? (
@@ -445,12 +453,14 @@ export default function CheckoutPage() {
                     type="tel"
                     required
                     value={formState.telefono}
-                    onChange={event =>
+                    onChange={(event) =>
                       handleChange("telefono", event.target.value)
                     }
                     className="input input-bordered w-full"
                     aria-invalid={Boolean(formErrors.telefono)}
-                    aria-describedby={formErrors.telefono ? "telefono-error" : undefined}
+                    aria-describedby={
+                      formErrors.telefono ? "telefono-error" : undefined
+                    }
                     inputMode="tel"
                     placeholder="+54 9 ..."
                   />
@@ -471,12 +481,12 @@ export default function CheckoutPage() {
                 <span className="label-text">Seleccioná un método</span>
                 <select
                   value={formState.metodoPago}
-                  onChange={event =>
+                  onChange={(event) =>
                     handleChange("metodoPago", event.target.value)
                   }
                   className="select select-bordered w-full"
                 >
-                  {PAYMENT_METHODS.map(method => (
+                  {PAYMENT_METHODS.map((method) => (
                     <option key={method.id} value={method.id}>
                       {method.label}
                     </option>
@@ -491,14 +501,15 @@ export default function CheckoutPage() {
               {isCardPayment ? (
                 <div className="space-y-4 rounded-lg border border-base-300 p-4">
                   <p className="text-sm text-base-content/70">
-                    Ingresá los datos de la tarjeta. Esta información se procesará de forma segura al integrar la pasarela de pago.
+                    Ingresá los datos de la tarjeta. Esta información se
+                    procesará de forma segura al integrar la pasarela de pago.
                   </p>
                   <label className="form-control w-full gap-2">
                     <span className="label-text">Nombre del titular</span>
                     <input
                       required={isCardPayment}
                       value={formState.titularTarjeta}
-                      onChange={event =>
+                      onChange={(event) =>
                         handleChange("titularTarjeta", event.target.value)
                       }
                       className="input input-bordered w-full"
@@ -520,7 +531,7 @@ export default function CheckoutPage() {
                     <input
                       required={isCardPayment}
                       value={formState.numeroTarjeta}
-                      onChange={event =>
+                      onChange={(event) =>
                         handleChange("numeroTarjeta", event.target.value)
                       }
                       className="input input-bordered w-full"
@@ -545,13 +556,15 @@ export default function CheckoutPage() {
                       <input
                         required={isCardPayment}
                         value={formState.vencimiento}
-                        onChange={event =>
+                        onChange={(event) =>
                           handleChange("vencimiento", event.target.value)
                         }
                         className="input input-bordered w-full"
                         aria-invalid={Boolean(formErrors.vencimiento)}
                         aria-describedby={
-                          formErrors.vencimiento ? "vencimiento-error" : undefined
+                          formErrors.vencimiento
+                            ? "vencimiento-error"
+                            : undefined
                         }
                         inputMode="numeric"
                         autoComplete="cc-exp"
@@ -573,13 +586,15 @@ export default function CheckoutPage() {
                       <input
                         required={isCardPayment}
                         value={formState.cvv}
-                        onChange={event =>
+                        onChange={(event) =>
                           handleChange("cvv", event.target.value)
                         }
                         className="input input-bordered w-full"
                         maxLength={3}
                         aria-invalid={Boolean(formErrors.cvv)}
-                        aria-describedby={formErrors.cvv ? "cvv-error" : undefined}
+                        aria-describedby={
+                          formErrors.cvv ? "cvv-error" : undefined
+                        }
                         inputMode="numeric"
                         autoComplete="cc-csc"
                         pattern="[0-9]{3}"
@@ -603,7 +618,7 @@ export default function CheckoutPage() {
             <div className="card-body space-y-4">
               <h2 className="card-title text-xl">Resumen del pedido</h2>
               <div className="space-y-3">
-                {cartItems.map(item => (
+                {cartItems.map((item) => (
                   <div key={item.id} className="flex justify-between text-sm">
                     <span>
                       {item.nombre} × {item.quantity}

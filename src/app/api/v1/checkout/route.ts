@@ -49,9 +49,7 @@ const generateOrderNumber = () =>
     .toString()
     .padStart(3, "0")}`;
 
-const isMetodoPagoCliente = (
-  value: string,
-): value is MetodoPagoCliente =>
+const isMetodoPagoCliente = (value: string): value is MetodoPagoCliente =>
   Object.values(MetodoPagoCliente).includes(value as MetodoPagoCliente);
 
 const toInt = (value: number) => Math.round(Number(value ?? 0));
@@ -102,7 +100,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: "Formato JSON inválido." },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -111,14 +109,19 @@ export async function POST(request: NextRequest) {
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     return NextResponse.json(
       { error: "El carrito está vacío." },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
-  if (!contact?.nombre || !contact?.apellido || !contact?.correo || !contact?.telefono) {
+  if (
+    !contact?.nombre ||
+    !contact?.apellido ||
+    !contact?.correo ||
+    !contact?.telefono
+  ) {
     return NextResponse.json(
       { error: "Faltan datos de contacto." },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -133,7 +136,8 @@ export async function POST(request: NextRequest) {
     validationErrors.nombre = "Ingresá un nombre válido (mínimo 2 caracteres).";
   }
   if (!isValidName(trimmedApellido)) {
-    validationErrors.apellido = "Ingresá un apellido válido (mínimo 2 caracteres).";
+    validationErrors.apellido =
+      "Ingresá un apellido válido (mínimo 2 caracteres).";
   }
   if (!isValidEmail(trimmedCorreo)) {
     validationErrors.correo = "Ingresá un correo electrónico válido.";
@@ -145,7 +149,7 @@ export async function POST(request: NextRequest) {
   if (!payment?.metodo || !isMetodoPagoCliente(payment.metodo)) {
     return NextResponse.json(
       { error: "Método de pago no soportado." },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -156,13 +160,14 @@ export async function POST(request: NextRequest) {
   const trimmedTitular = payment.titular?.trim() ?? "";
   const sanitizedCard = sanitizeCardNumber(payment.numero).slice(
     0,
-    CARD_DIGITS_LENGTH,
+    CARD_DIGITS_LENGTH
   );
   const sanitizedCVV = payment.cvv?.replace(/\D/g, "").slice(0, 3) ?? "";
 
   if (isCardPayment) {
     if (!trimmedTitular) {
-      validationErrors.titularTarjeta = "Ingresá el nombre del titular de la tarjeta.";
+      validationErrors.titularTarjeta =
+        "Ingresá el nombre del titular de la tarjeta.";
     } else if (!isValidName(trimmedTitular)) {
       validationErrors.titularTarjeta =
         "El nombre del titular debe tener al menos 2 caracteres.";
@@ -192,42 +197,40 @@ export async function POST(request: NextRequest) {
         error: "Datos inválidos.",
         details: validationErrors,
       },
-      { status: 422 },
+      { status: 422 }
     );
   }
 
-  const normalizedItems = cartItems.map(item => ({
+  const normalizedItems = cartItems.map((item) => ({
     id: Number(item.id),
     precio: toInt(item.precio),
     quantity: Math.max(1, toInt(item.quantity)),
   }));
 
   if (
-    normalizedItems.some(
-      item => !Number.isInteger(item.id) || item.id <= 0,
-    )
+    normalizedItems.some((item) => !Number.isInteger(item.id) || item.id <= 0)
   ) {
     return NextResponse.json(
       { error: "Identificador de artículo inválido." },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
-  if (normalizedItems.some(item => item.quantity <= 0)) {
+  if (normalizedItems.some((item) => item.quantity <= 0)) {
     return NextResponse.json(
       { error: "Las cantidades de los artículos deben ser positivas." },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
-  if (normalizedItems.some(item => item.precio < 0)) {
+  if (normalizedItems.some((item) => item.precio < 0)) {
     return NextResponse.json(
       { error: "Los precios de los artículos no pueden ser negativos." },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
-  const uniqueIds = Array.from(new Set(normalizedItems.map(item => item.id)));
+  const uniqueIds = Array.from(new Set(normalizedItems.map((item) => item.id)));
 
   const existingArticles = await prisma.articulo.findMany({
     where: { id: { in: uniqueIds } },
@@ -236,7 +239,7 @@ export async function POST(request: NextRequest) {
 
   if (existingArticles.length !== uniqueIds.length) {
     const missingIds = uniqueIds.filter(
-      id => !existingArticles.some(article => article.id === id),
+      (id) => !existingArticles.some((article) => article.id === id)
     );
     return NextResponse.json(
       {
@@ -245,19 +248,19 @@ export async function POST(request: NextRequest) {
           cartItems: `IDs inválidos: ${missingIds.join(", ")}`,
         },
       },
-      { status: 409 },
+      { status: 409 }
     );
   }
 
   const subtotal = normalizedItems.reduce(
     (sum, item) => sum + item.precio * item.quantity,
-    0,
+    0
   );
 
   if (typeof total === "number" && toInt(total) !== subtotal) {
     return NextResponse.json(
       { error: "El total enviado no coincide con el cálculo del servidor." },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -274,7 +277,7 @@ export async function POST(request: NextRequest) {
         correo_contacto: trimmedCorreo,
         telefono_contacto: sanitizePhone(trimmedTelefono),
         detalle: {
-          create: normalizedItems.map(item => ({
+          create: normalizedItems.map((item) => ({
             precio: item.precio,
             cantidad: item.quantity,
             id_articulo: item.id,
@@ -292,13 +295,13 @@ export async function POST(request: NextRequest) {
         numero: venta.numero,
         total: venta.total,
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
     console.error("[checkout][POST]", error);
     return NextResponse.json(
       { error: "No se pudo registrar la venta." },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

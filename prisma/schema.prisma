@@ -250,12 +250,17 @@ model CarritoUser {
   articulo Articulo      @relation(fields: [id_articulo], references: [id])
 }
 
+enum MetodoPagoCliente {
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+}
+
 model VentaArticulo {
-  id                Int                @id @default(autoincrement())
-  numero            String
-  total             Int
-  fecha             DateTime
-  id_user           Int?
+  id      Int      @id @default(autoincrement())
+  numero  String
+  total   Int
+  fecha   DateTime
+  id_user Int?
   metodo_pago       MetodoPagoCliente
   nombre_contacto   String
   apellido_contacto String

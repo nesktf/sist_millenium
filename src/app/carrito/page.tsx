@@ -7,13 +7,8 @@ import Image from "next/image"; // Usaremos next/image para optimizar las imáge
 
 export default function CartPage() {
   // Obtenemos todos los datos y funciones del contexto del carrito
-  const {
-    cartItems,
-    cartTotal,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-  } = useCart();
+  const { cartItems, cartTotal, updateQuantity, removeFromCart, clearCart } =
+    useCart();
 
   const formatCurrency = (value: number | undefined) =>
     Number(value ?? 0).toFixed(2);
