@@ -20,7 +20,7 @@ export default function DetalleOrdenModal({
       case "PAGADO":
         return <span className="badge badge-info">En Pago</span>;
       case "CANCELADO":
-        return <span className="badge badge-success">Pagado Completo</span>;
+        return <span className="badge badge-success">Pagado</span>;
       default:
         return <span className="badge badge-neutral">{estado}</span>;
     }
