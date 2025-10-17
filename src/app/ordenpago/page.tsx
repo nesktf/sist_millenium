@@ -170,7 +170,7 @@ export default function OrdenPagoPage() {
       case "PAGADO":
         return <span className="badge badge-info">En Pago</span>;
       case "CANCELADO":
-        return <span className="badge badge-success">Pagado Completo</span>;
+        return <span className="badge badge-success">Pagado</span>;
       default:
         return <span className="badge badge-neutral">{estado}</span>;
     }
@@ -238,7 +238,7 @@ export default function OrdenPagoPage() {
                 <option value="">Todos los estados</option>
                 <option value="PENDIENTE">Pendiente</option>
                 <option value="PAGADO">En Pago</option>
-                <option value="CANCELADO">Pagado Completo</option>
+                <option value="CANCELADO">Pagado</option>
               </select>
             </div>
 
