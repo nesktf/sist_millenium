@@ -96,6 +96,44 @@ export async function POST(req: NextRequest) {
       throw new Error("Forma de pago inválida");
     }
 
+    if (raw_proveedor_id == undefined) {
+      throw new Error("Sin proveedor");
+    }
+    const proveedorId = Number(raw_proveedor_id);
+    if (!Number.isInteger(proveedorId) || proveedorId <= 0) {
+      throw new Error("Proveedor inválido");
+    }
+
+    const parseDate = (value: unknown, label: string): Date | null => {
+      if (!value) return null;
+      const parsed = new Date(value as string);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new Error(`Fecha ${label} inválida`);
+      }
+      return parsed;
+    };
+
+    const fechaEntrega = parseDate(raw_fecha_entrega, "de entrega");
+    const fechaEmision = parseDate(raw_fecha_emision, "de emisión");
+    const fechaEsperada = fechaEntrega ?? fechaEmision ?? new Date();
+
+    let depositoId: number | null =
+      raw_deposito_id == undefined ? null : Number(raw_deposito_id);
+    if (depositoId != null) {
+      if (!Number.isInteger(depositoId) || depositoId <= 0) {
+        throw new Error("Depósito inválido");
+      }
+    } else {
+      const defaultDeposito = await prisma.deposito.findFirst({
+        select: { id: true },
+        orderBy: { id: "asc" },
+      });
+      if (!defaultDeposito) {
+        throw new Error("No hay depósitos disponibles");
+      }
+      depositoId = defaultDeposito.id;
+    }
+
     if (raw_items == undefined || !Array.isArray(raw_items)) {
       throw new Error("Sin items");
     }
@@ -124,7 +162,7 @@ export async function POST(req: NextRequest) {
       return {
         id: id_orden,
         forma_pago,
-        saldo: orden_data.getTotal(),
+        saldo: orden_data.getSaldo(),
         total: orden_data.getTotal(),
         fecha_esperada: orden_data.getFechaEsperada(),
         id_deposito: orden_data.getIdDeposito(),

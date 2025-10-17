@@ -195,6 +195,11 @@ enum FormaDePago {
   TRANSFERENCIA
 }
 
+enum MetodoPagoCliente {
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+}
+
 model DetalleOrdenCompra {
   id          Int @id @default(autoincrement())
   id_orden    Int
@@ -245,10 +250,6 @@ model CarritoUser {
   articulo Articulo      @relation(fields: [id_articulo], references: [id])
 }
 
-enum MetodoPagoCliente {
-  TARJETA_CREDITO
-  TARJETA_DEBITO
-}
 
 model VentaArticulo {
   id      Int      @id @default(autoincrement())

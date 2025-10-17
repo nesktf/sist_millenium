@@ -1,9 +1,11 @@
 // src/app/carrito/checkout/page.tsx
 "use client";
 
-import { useCart } from "@/context/CartContext";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import Swal from "sweetalert2";
+
+import { useCart } from "@/context/CartContext";
 
 type PaymentMethodOption = {
   id: string;
@@ -325,9 +327,17 @@ export default function CheckoutPage() {
         throw new Error(data?.error ?? "No pudimos registrar la venta.");
       }
 
-      setStatusMessage(
-        `Pedido registrado correctamente. Número de orden: ${data.numero}.`
-      );
+      const successMessage = `Pedido registrado correctamente. Número de orden: ${data.numero}.`;
+      setStatusMessage(successMessage);
+      void Swal.fire({
+        title: "¡Pedido confirmado!",
+        html: `<p class="text-lg">Tu compra se registró con éxito.</p><p class="mt-2 text-base"><strong>Número de orden:</strong> ${data.numero}</p>`,
+        icon: "success",
+        confirmButtonText: "Entendido",
+        confirmButtonColor: "#2563eb",
+        background: "#f3f4f6",
+        color: "#1f2937",
+      });
       clearCart();
       setFormState(createInitialFormState());
       setFormErrors({});
