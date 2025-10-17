@@ -10,6 +10,7 @@ import {
   registerMovimiento,
   retrieveDepositos,
 } from "@/prisma/instance";
+import { DepositoPostAction } from "@/app/api/v1/movimientos/deposito-actions/route";
 import { NaturalezaMovimiento } from "@/generated/prisma";
 
 //nuevo handler para GET (en consultar stock para q filtro me devuelva los depositos)
@@ -31,13 +32,6 @@ export async function GET(req: Request) {
     .catch((err) => {
       return NextResponse.json({ error: err.message }, { status: 500 });
     });
-}
-
-export enum DepositoPostAction {
-  get_depositos = 0,
-  get_movimientos = 1,
-  new_deposito = 2,
-  new_movimiento = 3,
 }
 
 function buildDateRange(fecha: string, timezoneOffset?: number) {
