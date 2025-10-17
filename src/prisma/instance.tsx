@@ -760,26 +760,6 @@ export class OrdenCompraData {
     return this.id_proveedor;
   }
 
-  getFechaEsperada() {
-    return this.fecha_esperada;
-  }
-  getIdDeposito() {
-    return this.id_deposito;
-  }
-  getIdProveedor() {
-    return this.id_proveedor;
-  }
-
-  getFechaEsperada() {
-    return this.fecha_esperada;
-  }
-  getIdDeposito() {
-    return this.id_deposito;
-  }
-  getIdProveedor() {
-    return this.id_proveedor;
-  }
-
   static fromItems(
     forma_pago: FormaDePago,
     items: Array<ItemOrdenCompra>,
@@ -788,31 +768,11 @@ export class OrdenCompraData {
     id_proveedor: number
   ): OrdenCompraData {
     const computedTotal =
-      extras.total ??
       items.reduce((total, curr) => total + curr.precio * curr.cantidad, 0);
-    const computedSaldo = extras.saldo ?? computedTotal;
     return new OrdenCompraData(
       forma_pago,
-      computedSaldo,
       computedTotal,
-      items,
-      extras.fecha_esperada,
-      extras.id_deposito,
-      extras.id_proveedor
-    );
-    return new OrdenCompraData(
-      forma_pago,
-      total, //saldo inicial
-      total, //total de la orden
-      items,
-      fecha_esperada,
-      id_deposito,
-      id_proveedor
-    );
-    return new OrdenCompraData(
-      forma_pago,
-      total, //saldo inicial
-      total, //total de la orden
+      computedTotal,
       items,
       fecha_esperada,
       id_deposito,
@@ -860,8 +820,8 @@ export async function registerOrdenCompra(
           forma_pago: orden.getFormaPago(),
           saldo: orden.getTotal(),
           fecha_esperada: orden.getFechaEsperada(), // nuevo
-          id_deposito: orden.getIdDeposito(), // nuevo
-          id_proveedor: orden.getIdProveedor(), // nuevo
+          id_deposito: orden.getDepositoId(), // nuevo
+          id_proveedor: orden.getProveedorId(), // nuevo
         },
       });
       await tx.detalleOrdenCompra.createMany({

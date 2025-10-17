@@ -84,9 +84,9 @@ export async function POST(req: NextRequest) {
     const {
       items: raw_items,
       forma_pago: raw_forma_pago,
-      fecha_esperada,
-      id_deposito,
-      id_proveedor,
+      fecha_esperada: raw_fecha_entrega,
+      id_deposito: raw_deposito_id,
+      id_proveedor: raw_proveedor_id,
     } = await req.json();
     if (raw_forma_pago == undefined) {
       throw new Error("Sin forma de pago");
@@ -113,9 +113,7 @@ export async function POST(req: NextRequest) {
       return parsed;
     };
 
-    const fechaEntrega = parseDate(raw_fecha_entrega, "de entrega");
-    const fechaEmision = parseDate(raw_fecha_emision, "de emisión");
-    const fechaEsperada = fechaEntrega ?? fechaEmision ?? new Date();
+    const fechaEsperada = parseDate(raw_fecha_entrega, "de entrega");
 
     let depositoId: number | null =
       raw_deposito_id == undefined ? null : Number(raw_deposito_id);
@@ -137,9 +135,9 @@ export async function POST(req: NextRequest) {
     if (raw_items == undefined || !Array.isArray(raw_items)) {
       throw new Error("Sin items");
     }
-    if (!fecha_esperada) throw new Error("Sin fecha esperada");
-    if (!id_deposito) throw new Error("Sin depósito");
-    if (!id_proveedor) throw new Error("Sin proveedor");
+    if (!fechaEsperada) throw new Error("Sin fecha esperada");
+    if (!depositoId) throw new Error("Sin depósito");
+    if (!proveedorId) throw new Error("Sin proveedor");
     let items = raw_items.map((item, idx): ItemOrdenCompra => {
       const { id, precio, cantidad } = item;
       if (!id || !precio || !cantidad) {
@@ -151,9 +149,9 @@ export async function POST(req: NextRequest) {
     const orden_data = OrdenCompraData.fromItems(
       forma_pago,
       items,
-      new Date(fecha_esperada),
-      Number(id_deposito),
-      Number(id_proveedor)
+      new Date(fechaEsperada),
+      Number(depositoId),
+      Number(proveedorId)
     );
     const out = await registerOrdenCompra(orden_data).then((id_orden) => {
       if (!id_orden) {
@@ -165,8 +163,8 @@ export async function POST(req: NextRequest) {
         saldo: orden_data.getSaldo(),
         total: orden_data.getTotal(),
         fecha_esperada: orden_data.getFechaEsperada(),
-        id_deposito: orden_data.getIdDeposito(),
-        id_proveedor: orden_data.getIdProveedor(),
+        id_deposito: orden_data.getDepositoId(),
+        id_proveedor: orden_data.getProveedorId(),
         items,
       };
     });
