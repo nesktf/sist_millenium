@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import DetalleOrdenModal from "@/components/pagos/DetalleOrdenModal";
 import { formatDateAR } from "@/utils/dateUtils";
+import { formatCurrency } from "@/utils/currency";
 
 interface HistorialPago {
   id: number;
@@ -291,12 +292,12 @@ export default function HistorialPagosPage() {
                         : "-"}
                     </td>
                     <td className="text-right font-bold text-success">
-                      ${pago.monto.toLocaleString()}
+                      {formatCurrency(pago.monto)}
                     </td>
                     <td>{getFormaPagoBadge(pago.forma_pago)}</td>
                     <td className="text-sm">{pago.referencia || "-"}</td>
                     <td className="text-right">
-                      ${pago.saldo_anterior.toLocaleString()}
+                      {formatCurrency(pago.saldo_anterior)}
                     </td>
                     <td className="text-right">
                       <span
@@ -306,7 +307,7 @@ export default function HistorialPagosPage() {
                             : "text-warning font-bold"
                         }
                       >
-                        ${pago.pendiente_por_pagar.toLocaleString()}
+                        {formatCurrency(pago.pendiente_por_pagar)}
                       </span>
                     </td>
                     <td className="text-center">

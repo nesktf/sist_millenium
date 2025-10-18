@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/Modal";
 import { getTodayAR } from "@/utils/dateUtils";
+import { formatCurrency } from "@/utils/currency";
 
 interface RegistrarPagoModalProps {
   isOpen: boolean;
@@ -103,13 +104,13 @@ export default function RegistrarPagoModal({
             {orden.proveedor?.nombre || orden.comprobante?.proveedor?.nombre || "-"}
           </div>
           <div>
-            <span className="font-semibold">Total:</span> $
-            {orden.total?.toLocaleString() || 0}
+            <span className="font-semibold">Total:</span>{" "}
+            {formatCurrency(orden.total ?? 0)}
           </div>
           <div>
             <span className="font-semibold">Saldo Pendiente:</span>{" "}
             <span className="text-warning font-bold">
-              ${saldoPendiente.toLocaleString()}
+              {formatCurrency(saldoPendiente)}
             </span>
           </div>
         </div>
@@ -155,7 +156,7 @@ export default function RegistrarPagoModal({
           />
           <label className="label">
             <span className="label-text-alt">
-              Máximo: ${saldoPendiente.toLocaleString()}
+              Máximo: {formatCurrency(saldoPendiente)}
             </span>
           </label>
         </div>

@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import Swal from "sweetalert2";
 
 import { useCart } from "@/context/CartContext";
+import { formatCurrency } from "@/utils/currency";
 
 type PaymentMethodOption = {
   id: string;
@@ -163,9 +164,6 @@ export default function CheckoutPage() {
     () => PAYMENT_METHODS.find((method) => method.id === formState.metodoPago),
     [formState.metodoPago]
   );
-
-  const formatCurrency = (value: number | undefined) =>
-    Number(value ?? 0).toFixed(2);
 
   const hasCartItems = cartItems.length > 0;
 
@@ -633,18 +631,18 @@ export default function CheckoutPage() {
                     <span>
                       {item.nombre} × {item.quantity}
                     </span>
-                    <span>${formatCurrency(item.precio * item.quantity)}</span>
+                    <span>{formatCurrency(item.precio * item.quantity)}</span>
                   </div>
                 ))}
               </div>
               <div className="divider my-2" />
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>${formatCurrency(cartSubtotal)}</span>
+                <span>{formatCurrency(cartSubtotal)}</span>
               </div>
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span>${formatCurrency(cartTotal)}</span>
+                <span>{formatCurrency(cartTotal)}</span>
               </div>
               {errorMessage ? (
                 <p className="text-error text-sm text-center">{errorMessage}</p>

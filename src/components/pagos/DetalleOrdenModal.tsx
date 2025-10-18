@@ -1,4 +1,5 @@
 import Modal from "@/components/Modal";
+import { formatCurrency } from "@/utils/currency";
 
 interface DetalleOrdenModalProps {
   isOpen: boolean;
@@ -46,12 +47,12 @@ export default function DetalleOrdenModal({
               {new Date(orden.fecha).toLocaleDateString()}
             </div>
             <div>
-              <span className="font-semibold">Total:</span> $
-              {orden.total?.toLocaleString() || 0}
+              <span className="font-semibold">Total:</span>{" "}
+              {formatCurrency(orden.total ?? 0)}
             </div>
             <div>
-              <span className="font-semibold">Saldo:</span> $
-              {orden.saldo?.toLocaleString() || 0}
+              <span className="font-semibold">Saldo:</span>{" "}
+              {formatCurrency(orden.saldo ?? 0)}
             </div>
             <div>
               <span className="font-semibold">Proveedor:</span>{" "}
@@ -78,8 +79,8 @@ export default function DetalleOrdenModal({
                 {new Date(orden.comprobante.fecha).toLocaleDateString()}
               </div>
               <div>
-                <span className="font-semibold">Total:</span> $
-                {orden.comprobante.total?.toLocaleString() || 0}
+                <span className="font-semibold">Total:</span>{" "}
+                {formatCurrency(orden.comprobante.total ?? 0)}
               </div>
             </div>
 
@@ -104,13 +105,8 @@ export default function DetalleOrdenModal({
                           <tr key={detalle.id}>
                             <td>{detalle.articulo?.nombre || "-"}</td>
                             <td>{detalle.cantidad}</td>
-                            <td>${detalle.precio_unitario?.toLocaleString()}</td>
-                            <td>
-                              $
-                              {(
-                                detalle.cantidad * detalle.precio_unitario
-                              ).toLocaleString()}
-                            </td>
+                            <td>{formatCurrency(detalle.precio_unitario)}</td>
+                            <td>{formatCurrency(detalle.cantidad * detalle.precio_unitario)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -140,10 +136,10 @@ export default function DetalleOrdenModal({
                   {orden.historial_pagos.map((pago: any) => (
                     <tr key={pago.id}>
                       <td>{new Date(pago.fecha).toLocaleDateString()}</td>
-                      <td>${pago.monto?.toLocaleString()}</td>
+                      <td>{formatCurrency(pago.monto ?? 0)}</td>
                       <td>{pago.forma_pago}</td>
-                      <td>${pago.saldo_anterior?.toLocaleString()}</td>
-                      <td>${pago.pendiente_por_pagar?.toLocaleString()}</td>
+                      <td>{formatCurrency(pago.saldo_anterior ?? 0)}</td>
+                      <td>{formatCurrency(pago.pendiente_por_pagar ?? 0)}</td>
                       <td>{pago.referencia || "-"}</td>
                     </tr>
                   ))}

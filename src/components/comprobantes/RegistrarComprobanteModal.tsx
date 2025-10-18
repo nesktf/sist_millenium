@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/Modal";
+import { formatCurrency } from "@/utils/currency";
 
 // --- INTERFACES ---
 interface Articulo {
@@ -65,9 +66,7 @@ function ProvComprTable({
                 <td>{detalle.articulo_nombre}</td>
                 <td>{detalle.observacion || "-"}</td>
                 <td className="text-right">{detalle.cantidad}</td>
-                <td className="text-right">
-                  ${detalle.precio_unitario.toFixed(2)}
-                </td>
+                <td className="text-right">{formatCurrency(detalle.precio_unitario)}</td>
                 <td className="text-center">
                   <button
                     type="button"
@@ -221,7 +220,7 @@ export default function RegistrarComprobanteModal({
         const totalRespuesta =
           typeof payload?.total === "number" ? payload.total : totalActual;
         alert(
-          `¡Comprobante guardado con éxito! Total: $${totalRespuesta}`
+          `¡Comprobante guardado con éxito! Total: ${formatCurrency(totalRespuesta)}`
         );
         resetForm();
         onSuccess();
@@ -450,7 +449,7 @@ export default function RegistrarComprobanteModal({
 
           <div className="flex justify-end mt-2">
             <span className="text-lg font-semibold">
-              Total actual: ${totalActual.toFixed(2)}
+              Total actual: {formatCurrency(totalActual)}
             </span>
           </div>
 

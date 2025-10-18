@@ -1,5 +1,6 @@
 // src/components/Cart.tsx
 import { Articulo } from "@/app/data/mockData";
+import { formatCurrency } from "@/utils/currency";
 
 interface CartProps {
   cart: Articulo[];
@@ -27,7 +28,7 @@ export const Cart = ({ cart, onRemove }: CartProps) => {
               </button>
             </div>
           ))}
-          <p className="mt-4 font-semibold">Total: ${total.toLocaleString()}</p>
+          <p className="mt-4 font-semibold">Total: {formatCurrency(total)}</p>
         </>
       )}
     </div>

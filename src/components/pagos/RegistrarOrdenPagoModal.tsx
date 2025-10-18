@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/Modal";
 import { getTodayAR } from "@/utils/dateUtils";
+import { formatCurrency } from "@/utils/currency";
 
 interface Proveedor {
   id: number;
@@ -191,7 +192,7 @@ export default function RegistrarOrdenPagoModal({
             {comprobantes.map((comp) => (
               <option key={comp.id} value={comp.id}>
                 {comp.tipo_comprobante.nombre} - {comp.letra}-{comp.sucursal}-
-                {comp.numero} - ${comp.total.toLocaleString()} (
+                {comp.numero} - {formatCurrency(comp.total)} (
                 {new Date(comp.fecha).toLocaleDateString()})
               </option>
             ))}
@@ -213,7 +214,7 @@ export default function RegistrarOrdenPagoModal({
           </label>
           <input
             type="text"
-            value={total ? `$${total.toLocaleString()}` : "-"}
+            value={total ? formatCurrency(total) : "-"}
             className="input input-bordered w-full"
             disabled
           />

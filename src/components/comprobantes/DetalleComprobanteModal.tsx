@@ -1,4 +1,5 @@
 import Modal from "@/components/Modal";
+import { formatCurrency } from "@/utils/currency";
 
 interface DetalleComprobanteModalProps {
   isOpen: boolean;
@@ -38,8 +39,8 @@ export default function DetalleComprobanteModal({
               {new Date(comprobante.fecha).toLocaleDateString()}
             </div>
             <div>
-              <span className="font-semibold">Total:</span> $
-              {comprobante.total?.toLocaleString() || 0}
+              <span className="font-semibold">Total:</span>{" "}
+              {formatCurrency(comprobante.total ?? 0)}
             </div>
             <div>
               <span className="font-semibold">Estado:</span>{" "}
@@ -77,8 +78,8 @@ export default function DetalleComprobanteModal({
                 {new Date(comprobante.orden_pago.fecha).toLocaleDateString()}
               </div>
               <div>
-                <span className="font-semibold">Saldo:</span> $
-                {comprobante.orden_pago.saldo?.toLocaleString() || 0}
+                <span className="font-semibold">Saldo:</span>{" "}
+                {formatCurrency(comprobante.orden_pago.saldo ?? 0)}
               </div>
             </div>
           </div>
@@ -105,13 +106,8 @@ export default function DetalleComprobanteModal({
                       <td>{detalle.articulo?.nombre || "-"}</td>
                       <td>{detalle.articulo?.codigo || "-"}</td>
                       <td>{detalle.cantidad}</td>
-                      <td>${detalle.precio_unitario?.toLocaleString()}</td>
-                      <td>
-                        $
-                        {(
-                          detalle.cantidad * detalle.precio_unitario
-                        ).toLocaleString()}
-                      </td>
+                      <td>{formatCurrency(Number(detalle.precio_unitario ?? 0))}</td>
+                      <td>{formatCurrency(Number(detalle.cantidad ?? 0) * Number(detalle.precio_unitario ?? 0))}</td>
                       <td>{detalle.observacion || "-"}</td>
                     </tr>
                   ))}
@@ -121,9 +117,7 @@ export default function DetalleComprobanteModal({
                     <td colSpan={4} className="text-right">
                       Total:
                     </td>
-                    <td colSpan={2}>
-                      ${comprobante.total?.toLocaleString() || 0}
-                    </td>
+                    <td colSpan={2}>{formatCurrency(comprobante.total ?? 0)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -140,8 +134,8 @@ export default function DetalleComprobanteModal({
                 {comprobante.orden_compra.id}
               </div>
               <div>
-                <span className="font-semibold">Total:</span> $
-                {comprobante.orden_compra.precio_total?.toLocaleString() || 0}
+                <span className="font-semibold">Total:</span>{" "}
+                {formatCurrency(comprobante.orden_compra.precio_total ?? 0)}
               </div>
               <div>
                 <span className="font-semibold">Forma de Pago:</span>{" "}

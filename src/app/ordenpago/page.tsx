@@ -6,6 +6,7 @@ import RegistrarOrdenPagoModal from "@/components/pagos/RegistrarOrdenPagoModal"
 import DetalleOrdenModal from "@/components/pagos/DetalleOrdenModal";
 import RegistrarPagoModal from "@/components/pagos/RegistrarPagoModal";
 import { formatDateAR } from "@/utils/dateUtils";
+import { formatCurrency } from "@/utils/currency";
 
 interface OrdenPago {
   id: number;
@@ -298,7 +299,7 @@ export default function OrdenPagoPage() {
                     </td>
                     <td>{new Date(orden.fecha).toLocaleDateString()}</td>
                     <td className="text-right">
-                      ${orden.total?.toLocaleString() || 0}
+                      {formatCurrency(orden.total ?? 0)}
                     </td>
                     <td className="text-right">
                       <span
@@ -308,7 +309,7 @@ export default function OrdenPagoPage() {
                             : "text-warning font-bold"
                         }
                       >
-                        ${orden.saldo?.toLocaleString() || 0}
+                        {formatCurrency(orden.saldo ?? 0)}
                       </span>
                     </td>
                     <td>{getEstadoBadge(orden.estado)}</td>

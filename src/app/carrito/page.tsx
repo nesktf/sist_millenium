@@ -4,14 +4,12 @@
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
 import Image from "next/image"; // Usaremos next/image para optimizar las imágenes
+import { formatCurrency } from "@/utils/currency";
 
 export default function CartPage() {
   // Obtenemos todos los datos y funciones del contexto del carrito
   const { cartItems, cartTotal, updateQuantity, removeFromCart, clearCart } =
     useCart();
-
-  const formatCurrency = (value: number | undefined) =>
-    Number(value ?? 0).toFixed(2);
 
   // Si el carrito está vacío, mostramos un mensaje amigable
   if (cartItems.length === 0) {
@@ -70,7 +68,7 @@ export default function CartPage() {
                           </div>
                         </div>
                       </td>
-                      <td>${formatCurrency(unitPrice)}</td>
+                      <td>{formatCurrency(unitPrice)}</td>
                       <td>
                         <input
                           type="number"
@@ -86,7 +84,7 @@ export default function CartPage() {
                           className="input input-bordered w-20 text-center"
                         />
                       </td>
-                      <td>${formatCurrency(subtotal)}</td>
+                      <td>{formatCurrency(subtotal)}</td>
                       <td>
                         <button
                           onClick={() => removeFromCart(item.id)}
@@ -110,11 +108,11 @@ export default function CartPage() {
               <h2 className="card-title text-xl mb-4">Resumen del Pedido</h2>
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>${formatCurrency(cartTotal)}</span>
+                <span>{formatCurrency(cartTotal)}</span>
               </div>
               <div className="flex justify-between font-bold text-lg my-2">
                 <span>Total</span>
-                <span>${formatCurrency(cartTotal)}</span>
+                <span>{formatCurrency(cartTotal)}</span>
               </div>
               <div className="card-actions justify-end mt-4">
                 <Link

@@ -1,6 +1,7 @@
 // src/components/ProductCard.tsx
 import { ArticuloFrontend } from "@/app/e-commerce/page";
 import { Button } from "@/components/ui/Button";
+import { formatCurrency } from "@/utils/currency";
 
 interface ProductCardProps {
   articulo: ArticuloFrontend;
@@ -21,7 +22,7 @@ export const ProductCard = ({ articulo, onAddToCart }: ProductCardProps) => {
         className="w-full h-48 object-cover rounded-lg"
       />
       <h2 className="font-semibold text-lg">{articulo.nombre}</h2>
-      <p className="text-gray-700 font-medium mt-1">${articulo.precio}</p>
+      <p className="text-gray-700 font-medium mt-1">{formatCurrency(articulo.precio)}</p>
 
       <Button
         className="mt-3 bg-blue-600 text-white hover:bg-blue-700"
