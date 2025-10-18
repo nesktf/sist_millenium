@@ -148,35 +148,6 @@ export default function RegistrarOrdenPagoModal({
         <form onSubmit={handleSubmit} className="space-y-4">
         <div className="form-control w-full">
           <label className="label">
-            <span className="label-text">Número de Orden *</span>
-          </label>
-          <input
-            type="text"
-            name="numero"
-            value={formData.numero}
-            onChange={handleChange}
-            className="input input-bordered w-full"
-            placeholder="Ej: OP-2025-001"
-            required
-          />
-        </div>
-
-        <div className="form-control w-full">
-          <label className="label">
-            <span className="label-text">Fecha de Orden *</span>
-          </label>
-          <input
-            type="date"
-            name="fecha"
-            value={formData.fecha}
-            onChange={handleChange}
-            className="input input-bordered w-full"
-            required
-          />
-        </div>
-
-        <div className="form-control w-full">
-          <label className="label">
             <span className="label-text">Proveedor *</span>
           </label>
           <select
@@ -196,6 +167,7 @@ export default function RegistrarOrdenPagoModal({
             ))}
           </select>
         </div>
+
 
         <div className="form-control w-full">
           <label className="label">
@@ -233,6 +205,8 @@ export default function RegistrarOrdenPagoModal({
           )}
         </div>
 
+
+        
         <div className="form-control w-full">
           <label className="label">
             <span className="label-text">Total de la Orden</span>
@@ -244,7 +218,37 @@ export default function RegistrarOrdenPagoModal({
             disabled
           />
         </div>
+        
+        <div className="form-control w-full">
+          <label className="label">
+            <span className="label-text">Fecha de Orden *</span>
+          </label>
+          <input
+            type="date"
+            name="fecha"
+            value={formData.fecha}
+            onChange={handleChange}
+            className="input input-bordered w-full"
+            required
+          />
+        </div>
 
+        <div className="form-control w-full">
+          <label className="label">
+            <span className="label-text">Número de Orden *</span>
+          </label>
+          <input
+            type="text"
+            name="numero"
+            value={formData.numero}
+            onChange={handleChange}
+            className="input input-bordered w-full"
+            placeholder="Ej: OP-2025-001"
+            required
+          />
+        </div>
+
+        
         <div className="form-control w-full">
           <label className="label">
             <span className="label-text">Estado</span>
