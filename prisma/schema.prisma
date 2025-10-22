@@ -267,6 +267,7 @@ model VentaArticulo {
   detalle DetalleVentaArticulo[]
 
   user UserEcommerce? @relation(fields: [id_user], references: [id])
+  factura           FacturaVenta?       @relation("VentaFacturaRelation")
 }
 
 model DetalleVentaArticulo {
@@ -299,4 +300,22 @@ model HistorialPago {
   pendiente_por_pagar Int
 
   orden_pago OrdenPago @relation(fields: [id_orden_pago], references: [id])
+}
+
+enum EstadoFacturaVenta {
+  PENDIENTE      // creada al confirmar pedido
+  EN_PREPARACION // en proceso
+  ENVIADA        // despacho
+  ENTREGADA      // entrega finalizada
+  CANCELADA
+}
+
+model FacturaVenta {
+  id              Int               @id @default(autoincrement())
+  numero          String            @unique
+  fecha_emision   DateTime          @default(now())
+  total           Int
+  estado          EstadoFacturaVenta
+  id_venta        Int               @unique
+  venta           VentaArticulo     @relation("VentaFacturaRelation", fields: [id_venta], references: [id])
 }
