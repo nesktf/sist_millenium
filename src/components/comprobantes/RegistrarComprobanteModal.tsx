@@ -1,23 +1,20 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/Modal";
 
-// --- INTERFACES ---
+// --- INTERFACES (sin cambios) ---
 interface Articulo {
   id: number;
   nombre: string;
 }
-
 interface Proveedor {
   id: number;
   nombre: string;
 }
-
 interface TipoComprobanteProveedor {
   id: number;
   nombre: string;
   descripcion?: string;
 }
-
 interface DetalleComprobante {
   id_articulo: number;
   articulo_nombre: string;
@@ -25,14 +22,66 @@ interface DetalleComprobante {
   precio_unitario: number;
   observacion?: string;
 }
-
 interface RegistrarComprobanteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-// --- COMPONENTE PARA LA TABLA DE DETALLES ---
+// --- HELPER FUNCTIONS ---
+
+/** Formatea un número para mostrarlo como moneda (ej: $1.234,56) */
+const formatMoney = (amount: number | null | undefined) => {
+  if (typeof amount !== 'number') return '$0';
+  return `$${amount.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+/** Formatea un número para mostrarlo como cantidad (ej: 1.234) */
+const formatQuantity = (quantity: number | null | undefined) => {
+  if (typeof quantity !== 'number') return '0';
+  return quantity.toLocaleString('es-AR');
+};
+
+/**
+ * Limpia y convierte un string de input (ej: "1.234,50") a un número (ej: 1234.50)
+ */
+const unformatNumberInput = (value: string): number => {
+  if (!value) return 0;
+  const cleaned = value
+    .replace(/\./g, "")   // Quita los puntos de miles
+    .replace(",", ".");  // Reemplaza la coma decimal por un punto
+  return parseFloat(cleaned) || 0;
+};
+
+/**
+ * Formatea un string de input (ej: "1234,5") a un string con puntos (ej: "1.234,5")
+ * @param value - El string del input
+ * @param allowDecimals - Si se deben permitir decimales (default: true)
+ */
+const formatNumberInput = (value: string, allowDecimals: boolean = true): string => {
+  if (!value) return "";
+  
+  const parts = value.split(",");
+  const integerPart = parts[0].replace(/\./g, "").replace(/\D/g, "");
+  const formattedInteger = BigInt(integerPart || "0").toLocaleString("es-AR");
+
+  if (allowDecimals) {
+    if (parts.length > 1) {
+      const decimalPart = parts[1].replace(/\D/g, "");
+      return `${formattedInteger},${decimalPart}`;
+    } else if (value.endsWith(",")) {
+      return `${formattedInteger},`;
+    }
+  }
+  
+  return formattedInteger;
+};
+
+
+// --- COMPONENTE TABLA (Actualizado con formato) ---
 function ProvComprTable({
   detalles,
   onDelete,
@@ -64,9 +113,13 @@ function ProvComprTable({
               <tr key={index}>
                 <td>{detalle.articulo_nombre}</td>
                 <td>{detalle.observacion || "-"}</td>
-                <td className="text-right">{detalle.cantidad}</td>
                 <td className="text-right">
-                  ${detalle.precio_unitario.toFixed(2)}
+                  {/* Formato de display */}
+                  {formatQuantity(detalle.cantidad)}
+                </td>
+                <td className="text-right">
+                  {/* Formato de display */}
+                  {formatMoney(detalle.precio_unitario)}
                 </td>
                 <td className="text-center">
                   <button
@@ -86,7 +139,7 @@ function ProvComprTable({
   );
 }
 
-// --- COMPONENTE PRINCIPAL DEL MODAL ---
+// --- COMPONENTE PRINCIPAL DEL MODAL (Actualizado) ---
 export default function RegistrarComprobanteModal({
   isOpen,
   onClose,
@@ -110,8 +163,8 @@ export default function RegistrarComprobanteModal({
     id_articulo: "",
     articulo_nombre: "",
     observacion: "",
-    cantidad: "",
-    precio_unitario: "",
+    cantidad: "", // Ahora es un string formateado
+    precio_unitario: "", // Ahora es un string formateado
   });
 
   const totalActual = detalles.reduce(
@@ -143,10 +196,12 @@ export default function RegistrarComprobanteModal({
     setHeaderData({ ...headerData, [e.target.name]: e.target.value });
   };
 
+  // --- MODIFICADO para formatear inputs ---
   const handleDetalleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    
     if (name === "id_articulo") {
       const selectedArticulo = articulos.find(
         (art) => art.id === parseInt(value)
@@ -156,14 +211,24 @@ export default function RegistrarComprobanteModal({
         id_articulo: value,
         articulo_nombre: selectedArticulo?.nombre || "",
       });
+    } else if (name === "cantidad") {
+      // Formatear cantidad (sin decimales)
+      const formattedValue = formatNumberInput(value, false);
+      setDetalleData({ ...detalleData, [name]: formattedValue });
+    } else if (name === "precio_unitario") {
+      // Formatear precio (con decimales)
+      const formattedValue = formatNumberInput(value, true);
+      setDetalleData({ ...detalleData, [name]: formattedValue });
     } else {
       setDetalleData({ ...detalleData, [name]: value });
     }
   };
 
+  // --- MODIFICADO para des-formatear ---
   const handleAddDetalle = () => {
-    const cantidadNum = parseFloat(detalleData.cantidad) || 0;
-    const precioNum = parseFloat(detalleData.precio_unitario) || 0;
+    // Usar helper para obtener números reales
+    const cantidadNum = unformatNumberInput(detalleData.cantidad);
+    const precioNum = unformatNumberInput(detalleData.precio_unitario);
 
     if (!detalleData.id_articulo || cantidadNum <= 0 || precioNum <= 0) {
       alert(
@@ -173,11 +238,13 @@ export default function RegistrarComprobanteModal({
     }
 
     const nuevoDetalle = {
-      ...detalleData,
       id_articulo: parseInt(detalleData.id_articulo),
-      cantidad: cantidadNum,
-      precio_unitario: precioNum,
+      articulo_nombre: detalleData.articulo_nombre,
+      cantidad: cantidadNum, // Guardar el número limpio
+      precio_unitario: precioNum, // Guardar el número limpio
+      observacion: detalleData.observacion
     };
+    
     setDetalles([...detalles, nuevoDetalle]);
     setDetalleData({
       id_articulo: "",
@@ -221,7 +288,8 @@ export default function RegistrarComprobanteModal({
         const totalRespuesta =
           typeof payload?.total === "number" ? payload.total : totalActual;
         alert(
-          `¡Comprobante guardado con éxito! Total: $${totalRespuesta}`
+           // --- FORMATO APLICADO ---
+          `¡Comprobante guardado con éxito! Total: ${formatMoney(totalRespuesta)}`
         );
         resetForm();
         onSuccess();
@@ -264,6 +332,7 @@ export default function RegistrarComprobanteModal({
         <h2 className="text-xl font-bold mb-4">Cargar Comprobante de Proveedor</h2>
 
         <form className="space-y-3" onSubmit={handleSubmit}>
+          {/* Datos del Comprobante (sin cambios) */}
           <div className="p-3 border rounded-md">
             <h3 className="text-lg font-semibold mb-2">Datos del Comprobante</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
@@ -367,10 +436,12 @@ export default function RegistrarComprobanteModal({
               </div>
             </div>
           </div>
-
+          
+          {/* --- MODIFICADO: Inputs de Artículo --- */}
           <div className="p-3 border rounded-md">
             <h3 className="text-lg font-semibold mb-2">Agregar Artículo</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+              {/* Select Artículo (sin cambios) */}
               <div className="form-control w-full md:col-span-2">
                 <label htmlFor="id_articulo" className="label py-1">
                   <span className="label-text">Artículo</span>
@@ -392,6 +463,8 @@ export default function RegistrarComprobanteModal({
                   ))}
                 </select>
               </div>
+
+              {/* Input Cantidad */}
               <div className="form-control w-full">
                 <label htmlFor="cantidad" className="label py-1">
                   <span className="label-text">Cantidad</span>
@@ -399,14 +472,16 @@ export default function RegistrarComprobanteModal({
                 <input
                   id="cantidad"
                   name="cantidad"
-                  type="number"
-                  min={0}
+                  type="text" // Cambiado
+                  inputMode="decimal" // Cambiado
                   value={detalleData.cantidad}
                   onChange={handleDetalleChange}
                   placeholder="0"
                   className="input input-sm input-bordered w-full"
                 />
               </div>
+
+              {/* Input Precio */}
               <div className="form-control w-full">
                 <label htmlFor="precio_unitario" className="label py-1">
                   <span className="label-text">Precio</span>
@@ -414,14 +489,16 @@ export default function RegistrarComprobanteModal({
                 <input
                   id="precio_unitario"
                   name="precio_unitario"
-                  type="number"
-                  min={0}
+                  type="text" // Cambiado
+                  inputMode="decimal" // Cambiado
                   value={detalleData.precio_unitario}
                   onChange={handleDetalleChange}
                   placeholder="0"
                   className="input input-sm input-bordered w-full"
                 />
               </div>
+
+              {/* Input Observación (sin cambios) */}
               <div className="form-control w-full md:col-span-2">
                 <label htmlFor="observacion" className="label py-1">
                   <span className="label-text">Observación</span>
@@ -443,19 +520,21 @@ export default function RegistrarComprobanteModal({
               Agregar a la lista
             </button>
           </div>
+          {/* --- FIN MODIFICACIÓN --- */}
 
+
+          {/* Tabla (sin cambios, usa el componente actualizado) */}
           <ProvComprTable detalles={detalles} onDelete={handleDeleteDetalle} />
 
+          {/* Total (MODIFICADO) */}
           <div className="flex justify-end mt-2">
             <span className="text-lg font-semibold">
-              Total actual: ${totalActual.toFixed(2)}
+              {/* --- FORMATO APLICADO --- */}
+              Total actual: {formatMoney(totalActual)}
             </span>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <button type="button" onClick={onClose} className="btn btn-ghost">
-              Cancelar
-            </button>
             <button type="submit" className="btn btn-primary">
               Guardar Comprobante
             </button>

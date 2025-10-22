@@ -5,6 +5,7 @@ import Link from "next/link";
 import DetalleOrdenModal from "@/components/pagos/DetalleOrdenModal";
 import { formatDateAR } from "@/utils/dateUtils";
 
+// --- INTERFAZ (con la corrección de 'comprobantes' plural) ---
 interface HistorialPago {
   id: number;
   fecha: string;
@@ -20,11 +21,12 @@ interface HistorialPago {
       id: number;
       nombre: string;
     };
-    comprobante?: {
+    // MODIFICADO
+    comprobantes?: Array<{
       letra: string;
       sucursal: string;
       numero: string;
-    };
+    }>;
   };
 }
 
@@ -33,18 +35,27 @@ interface Proveedor {
   nombre: string;
 }
 
+// --- HELPER DE FORMATO ---
+const formatMoney = (amount: number | null | undefined) => {
+  if (typeof amount !== 'number') return '$0';
+  return `$${amount.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
 export default function HistorialPagosPage() {
   const [pagos, setPagos] = useState<HistorialPago[]>([]);
   const [pagosFiltrados, setPagosFiltrados] = useState<HistorialPago[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Filtros
   const [filtroProveedor, setFiltroProveedor] = useState("");
   const [filtroFormaPago, setFiltroFormaPago] = useState("");
   const [filtroFechaDesde, setFiltroFechaDesde] = useState("");
   const [filtroFechaHasta, setFiltroFechaHasta] = useState("");
-  
+
   // Modal
   const [showModalDetalle, setShowModalDetalle] = useState(false);
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<any>(null);
@@ -56,7 +67,13 @@ export default function HistorialPagosPage() {
 
   useEffect(() => {
     aplicarFiltros();
-  }, [pagos, filtroProveedor, filtroFormaPago, filtroFechaDesde, filtroFechaHasta]);
+  }, [
+    pagos,
+    filtroProveedor,
+    filtroFormaPago,
+    filtroFechaDesde,
+    filtroFechaHasta,
+  ]);
 
   const fetchData = async () => {
     try {
@@ -167,6 +184,7 @@ export default function HistorialPagosPage() {
   return (
     <div>
       <main style={{ padding: "2rem" }}>
+        {/* Encabezado y acciones */}
         <div className="mb-4 flex flex-wrap gap-3 items-center">
           <Link href="/ordenpago" className="btn btn-outline btn-sm">
             Volver a Órdenes de Pago
@@ -236,7 +254,7 @@ export default function HistorialPagosPage() {
               />
             </div>
           </div>
-          
+
           <div className="flex justify-between items-center mt-3">
             <div className="text-sm text-base-content/70">
               Mostrando {pagosFiltrados.length} de {pagos.length} pagos
@@ -250,15 +268,15 @@ export default function HistorialPagosPage() {
           </div>
         </div>
 
+        {/* Tabla de Pagos (MODIFICADA CON FORMATO) */}
         <div className="bg-base-100 rounded-lg shadow overflow-x-auto">
           <table className="table table-zebra w-full">
             <thead className="bg-base-200">
               <tr>
-                <th>ID</th>
                 <th>Fecha</th>
                 <th>Orden de Pago</th>
                 <th>Proveedor</th>
-                <th>Comprobante</th>
+                <th>Comprobante(s)</th>
                 <th>Monto</th>
                 <th>Forma de Pago</th>
                 <th>Referencia</th>
@@ -277,7 +295,6 @@ export default function HistorialPagosPage() {
               ) : (
                 pagosFiltrados.map((pago) => (
                   <tr key={pago.id}>
-                    <td>{pago.id}</td>
                     <td>{new Date(pago.fecha).toLocaleDateString()}</td>
                     <td>
                       <span className="font-semibold">
@@ -286,17 +303,29 @@ export default function HistorialPagosPage() {
                     </td>
                     <td>{pago.orden_pago.proveedor.nombre}</td>
                     <td>
-                      {pago.orden_pago.comprobante
-                        ? `${pago.orden_pago.comprobante.letra}-${pago.orden_pago.comprobante.sucursal}-${pago.orden_pago.comprobante.numero}`
-                        : "-"}
+                      {/* --- LÓGICA MODIFICADA (plural) --- */}
+                      {pago.orden_pago.comprobantes &&
+                      pago.orden_pago.comprobantes.length > 0 ? (
+                        <div className="flex flex-col text-xs">
+                          {pago.orden_pago.comprobantes.map((c) => (
+                            <span key={`${c.sucursal}-${c.numero}`}>
+                              {`${c.letra}-${c.sucursal}-${c.numero}`}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        "-"
+                      )}
                     </td>
                     <td className="text-right font-bold text-success">
-                      ${pago.monto.toLocaleString()}
+                      {/* --- FORMATO APLICADO --- */}
+                      {formatMoney(pago.monto)}
                     </td>
                     <td>{getFormaPagoBadge(pago.forma_pago)}</td>
                     <td className="text-sm">{pago.referencia || "-"}</td>
                     <td className="text-right">
-                      ${pago.saldo_anterior.toLocaleString()}
+                      {/* --- FORMATO APLICADO --- */}
+                      {formatMoney(pago.saldo_anterior)}
                     </td>
                     <td className="text-right">
                       <span
@@ -306,7 +335,8 @@ export default function HistorialPagosPage() {
                             : "text-warning font-bold"
                         }
                       >
-                        ${pago.pendiente_por_pagar.toLocaleString()}
+                        {/* --- FORMATO APLICADO --- */}
+                        {formatMoney(pago.pendiente_por_pagar)}
                       </span>
                     </td>
                     <td className="text-center">
@@ -325,6 +355,7 @@ export default function HistorialPagosPage() {
           </table>
         </div>
 
+        {/* Modal (sin cambios) */}
         <DetalleOrdenModal
           isOpen={showModalDetalle}
           onClose={() => {
