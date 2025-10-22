@@ -5,36 +5,129 @@ type DBId = number;
 
 // ==================== ORDEN DE PAGO ====================
 
+// Esta es la interfaz que usaba tu función anterior
 export interface OrdenPagoData {
   numero: string;
   fecha: Date;
   estado: EstadoOrdenPago;
   saldo?: number;
   total: number;
-  id_comprobante: number;
+  ids_comprobantes: number[];
   id_proveedor: number;
 }
 
+
 export async function registerOrdenPago(data: OrdenPagoData): Promise<DBId> {
-  const orden = await prisma.ordenPago.create({
-    data: {
-      numero: data.numero,
-      fecha: data.fecha,
-      estado: data.estado,
-      saldo: data.saldo ?? data.total,
-      total: data.total,
-      id_comprobante: data.id_comprobante,
-      id_proveedor: data.id_proveedor,
-    },
+  return await prisma.$transaction(async (tx) => {
+    // 1. Crear la Orden de Pago
+    const orden = await tx.ordenPago.create({
+      data: {
+        numero: data.numero,
+        fecha: data.fecha,
+        estado: data.estado,
+        saldo: data.saldo ?? data.total,
+        total: data.total,
+        id_proveedor: data.id_proveedor,
+      },
+    });
+
+    // 2. Vincular los comprobantes a la nueva orden
+    await tx.comprobanteProveedor.updateMany({
+      where: {
+        id: { in: data.ids_comprobantes },
+        id_proveedor: data.id_proveedor, 
+        id_orden_pago: null,         
+      },
+      data: {
+        id_orden_pago: orden.id,
+      },
+    });
+
+    return orden.id;
   });
-  return orden.id;
 }
+
+// --- NUEVA INTERFAZ PARA EL FLUJO UNIFICADO ---
+export interface OrdenPagoConPagoData {
+  // Datos Orden
+  numero: string;
+  fecha: Date;
+  id_proveedor: number;
+  ids_comprobantes: number[];
+  total: number;
+  
+  // Datos Pago
+  fecha_pago: Date;
+  monto_pago: number;
+  forma_pago: FormaDePago;
+  referencia?: string;
+}
+
+// --- NUEVA FUNCIÓN PARA EL FLUJO UNIFICADO ---
+export async function registerOrdenPagoConPagoInicial(data: OrdenPagoConPagoData): Promise<DBId> {
+  
+  // 1. Calcular nuevo saldo y estado
+  const nuevoSaldo = data.total - data.monto_pago;
+  
+  const nuevoEstado = (nuevoSaldo <= 0) 
+    ? EstadoOrdenPago.CANCELADO 
+    : EstadoOrdenPago.PAGADO;
+
+  // Validación de seguridad
+  if (nuevoSaldo < 0) {
+    throw new Error("El monto del pago no puede ser mayor al total.");
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    
+    // 2. Crear la Orden de Pago
+    const orden = await tx.ordenPago.create({
+      data: {
+        numero: data.numero,
+        fecha: data.fecha,
+        estado: nuevoEstado,
+        saldo: nuevoSaldo,  
+        total: data.total,
+        id_proveedor: data.id_proveedor,
+      },
+    });
+
+    // 3. Vincular los comprobantes a la nueva orden
+    await tx.comprobanteProveedor.updateMany({
+      where: {
+        id: { in: data.ids_comprobantes },
+        id_proveedor: data.id_proveedor,
+        id_orden_pago: null,
+      },
+      data: {
+        id_orden_pago: orden.id,
+      },
+    });
+
+    // 4. Crear el primer registro en historial de pagos
+    await tx.historialPago.create({
+      data: {
+        fecha: data.fecha_pago,
+        id_orden_pago: orden.id,
+        monto: data.monto_pago,
+        forma_pago: data.forma_pago,
+        referencia: data.referencia,
+        saldo_anterior: data.total, 
+        pendiente_por_pagar: nuevoSaldo, 
+      },
+    });
+
+    // 5. Devolver el ID de la orden creada
+    return orden.id;
+  });
+}
+
 
 export async function retrieveOrdenPago(id: DBId) {
   return await prisma.ordenPago.findUnique({
     where: { id },
     include: {
-      comprobante: {
+      comprobantes: { 
         include: {
           proveedor: true,
           tipo_comprobante: true,
@@ -63,9 +156,12 @@ export async function retrieveOrdenPagoList(filters?: {
     where: {
       ...(filters?.id_proveedor && { id_proveedor: filters.id_proveedor }),
       ...(filters?.estado && { estado: filters.estado }),
+      estado: {
+        not: EstadoOrdenPago.PENDIENTE
+      }
     },
     include: {
-      comprobante: {
+      comprobantes: {
         include: {
           proveedor: true,
           tipo_comprobante: true,
@@ -130,7 +226,7 @@ export async function retrieveHistorialPagosByOrden(id_orden_pago: DBId) {
     include: {
       orden_pago: {
         include: {
-          comprobante: {
+          comprobantes: {
             include: {
               proveedor: true,
             },
@@ -150,7 +246,7 @@ export async function retrieveAllHistorialPagos() {
     include: {
       orden_pago: {
         include: {
-          comprobante: {
+          comprobantes: {
             include: {
               proveedor: true,
             },

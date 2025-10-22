@@ -6,6 +6,20 @@ interface DetalleComprobanteModalProps {
   comprobante: any;
 }
 
+// --- HELPER FUNCTIONS ---
+const formatMoney = (amount: number | null | undefined) => {
+  if (typeof amount !== 'number') return '$0';
+  return `$${amount.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+const formatQuantity = (quantity: number | null | undefined) => {
+  if (typeof quantity !== 'number') return '0';
+  return quantity.toLocaleString('es-AR');
+};
+
 export default function DetalleComprobanteModal({
   isOpen,
   onClose,
@@ -18,6 +32,7 @@ export default function DetalleComprobanteModal({
       <h2 className="text-xl font-bold mb-4">Detalle del Comprobante</h2>
 
       <div className="space-y-4">
+        {/* Info Comprobante (MODIFICADO) */}
         <div className="bg-base-200 p-4 rounded-lg">
           <h3 className="font-bold mb-2">Información del Comprobante</h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -38,8 +53,9 @@ export default function DetalleComprobanteModal({
               {new Date(comprobante.fecha).toLocaleDateString()}
             </div>
             <div>
-              <span className="font-semibold">Total:</span> $
-              {comprobante.total?.toLocaleString() || 0}
+              <span className="font-semibold">Total:</span>{" "}
+              {/* --- FORMATO APLICADO --- */}
+              {formatMoney(comprobante.total || 0)}
             </div>
             <div>
               <span className="font-semibold">Estado:</span>{" "}
@@ -52,6 +68,7 @@ export default function DetalleComprobanteModal({
           </div>
         </div>
 
+        {/* Info Orden de Pago (MODIFICADO) */}
         {comprobante.orden_pago && (
           <div className="bg-base-200 p-4 rounded-lg">
             <h3 className="font-bold mb-2">Orden de Pago Asociada</h3>
@@ -77,13 +94,15 @@ export default function DetalleComprobanteModal({
                 {new Date(comprobante.orden_pago.fecha).toLocaleDateString()}
               </div>
               <div>
-                <span className="font-semibold">Saldo:</span> $
-                {comprobante.orden_pago.saldo?.toLocaleString() || 0}
+                <span className="font-semibold">Saldo:</span>{" "}
+                {/* --- FORMATO APLICADO --- */}
+                {formatMoney(comprobante.orden_pago.saldo || 0)}
               </div>
             </div>
           </div>
         )}
 
+        {/* Tabla de Artículos (MODIFICADO) */}
         {comprobante.detalles && comprobante.detalles.length > 0 && (
           <div className="bg-base-200 p-4 rounded-lg">
             <h3 className="font-bold mb-2">Artículos del Comprobante</h3>
@@ -104,13 +123,19 @@ export default function DetalleComprobanteModal({
                     <tr key={detalle.id}>
                       <td>{detalle.articulo?.nombre || "-"}</td>
                       <td>{detalle.articulo?.codigo || "-"}</td>
-                      <td>{detalle.cantidad}</td>
-                      <td>${detalle.precio_unitario?.toLocaleString()}</td>
                       <td>
-                        $
-                        {(
+                        {/* --- FORMATO APLICADO --- */}
+                        {formatQuantity(detalle.cantidad)}
+                      </td>
+                      <td>
+                        {/* --- FORMATO APLICADO --- */}
+                        {formatMoney(detalle.precio_unitario || 0)}
+                      </td>
+                      <td>
+                        {/* --- FORMATO APLICADO --- */}
+                        {formatMoney(
                           detalle.cantidad * detalle.precio_unitario
-                        ).toLocaleString()}
+                        )}
                       </td>
                       <td>{detalle.observacion || "-"}</td>
                     </tr>
@@ -122,7 +147,8 @@ export default function DetalleComprobanteModal({
                       Total:
                     </td>
                     <td colSpan={2}>
-                      ${comprobante.total?.toLocaleString() || 0}
+                      {/* --- FORMATO APLICADO --- */}
+                      {formatMoney(comprobante.total || 0)}
                     </td>
                   </tr>
                 </tfoot>
@@ -131,6 +157,7 @@ export default function DetalleComprobanteModal({
           </div>
         )}
 
+        {/* Info Orden de Compra (MODIFICADO) */}
         {comprobante.orden_compra && (
           <div className="bg-base-200 p-4 rounded-lg">
             <h3 className="font-bold mb-2">Orden de Compra Relacionada</h3>
@@ -140,8 +167,9 @@ export default function DetalleComprobanteModal({
                 {comprobante.orden_compra.id}
               </div>
               <div>
-                <span className="font-semibold">Total:</span> $
-                {comprobante.orden_compra.precio_total?.toLocaleString() || 0}
+                <span className="font-semibold">Total:</span>{" "}
+                {/* --- FORMATO APLICADO --- */}
+                {formatMoney(comprobante.orden_compra.precio_total || 0)}
               </div>
               <div>
                 <span className="font-semibold">Forma de Pago:</span>{" "}

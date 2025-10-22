@@ -7,6 +7,7 @@ import DetalleOrdenModal from "@/components/pagos/DetalleOrdenModal";
 import RegistrarPagoModal from "@/components/pagos/RegistrarPagoModal";
 import { formatDateAR } from "@/utils/dateUtils";
 
+// --- INTERFACES ---
 interface OrdenPago {
   id: number;
   numero: string;
@@ -18,20 +19,29 @@ interface OrdenPago {
     id: number;
     nombre: string;
   };
-  comprobante?: {
+  comprobantes?: Array<{
     letra: string;
     sucursal: string;
     numero: string;
     proveedor: {
       nombre: string;
     };
-  };
+  }>;
 }
 
 interface Proveedor {
   id: number;
   nombre: string;
 }
+
+// --- HELPER DE FORMATO ---
+const formatMoney = (amount: number | null | undefined) => {
+  if (typeof amount !== 'number') return '$0';
+  return `$${amount.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 
 export default function OrdenPagoPage() {
   const [ordenes, setOrdenes] = useState<OrdenPago[]>([]);
@@ -259,13 +269,12 @@ export default function OrdenPagoPage() {
           </div>
         </div>
 
-        {/* Tabla de órdenes */}
         <div className="bg-base-100 rounded-lg shadow overflow-x-auto">
           <table className="table table-zebra w-full">
             <thead className="bg-base-200">
               <tr>
                 <th>Número</th>
-                <th>Comprobante</th>
+                <th>Comprobante(s)</th>
                 <th>Proveedor</th>
                 <th>Fecha</th>
                 <th>Total</th>
@@ -287,18 +296,28 @@ export default function OrdenPagoPage() {
                   <tr key={orden.id}>
                     <td className="font-semibold">{orden.numero}</td>
                     <td>
-                      {orden.comprobante
-                        ? `${orden.comprobante.letra}-${orden.comprobante.sucursal}-${orden.comprobante.numero}`
-                        : "-"}
+                      {/* Lógica de comprobantes plural */}
+                      {orden.comprobantes && orden.comprobantes.length > 0 ? (
+                        <div className="flex flex-col text-xs">
+                          {orden.comprobantes.map((c) => (
+                            <span key={`${c.sucursal}-${c.numero}`}>
+                              {`${c.letra}-${c.sucursal}-${c.numero}`}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        "-"
+                      )}
                     </td>
                     <td>
                       {orden.proveedor?.nombre ||
-                        orden.comprobante?.proveedor?.nombre ||
+                        orden.comprobantes?.[0]?.proveedor?.nombre ||
                         "-"}
                     </td>
                     <td>{new Date(orden.fecha).toLocaleDateString()}</td>
                     <td className="text-right">
-                      ${orden.total?.toLocaleString() || 0}
+                      {/* --- FORMATO APLICADO --- */}
+                      {formatMoney(orden.total || 0)}
                     </td>
                     <td className="text-right">
                       <span
@@ -308,11 +327,13 @@ export default function OrdenPagoPage() {
                             : "text-warning font-bold"
                         }
                       >
-                        ${orden.saldo?.toLocaleString() || 0}
+                        {/* --- FORMATO APLICADO --- */}
+                        {formatMoney(orden.saldo || 0)}
                       </span>
                     </td>
                     <td>{getEstadoBadge(orden.estado)}</td>
                     <td className="text-center">
+                      {/* Lógica de acciones */}
                       <div className="flex gap-1 justify-center">
                         <button
                           onClick={() => handleVerDetalle(orden.id)}
@@ -321,15 +342,18 @@ export default function OrdenPagoPage() {
                         >
                           Ver
                         </button>
-                        {(orden.estado === "PENDIENTE" || orden.estado === "PAGADO") && orden.saldo! > 0 && (
-                          <button
-                            onClick={() => handleAbrirModalPago(orden.id)}
-                            className="btn btn-success btn-xs"
-                            title="Registrar Pago"
-                          >
-                            Pagar
-                          </button>
-                        )}
+                        {(orden.estado === "PENDIENTE" ||
+                          orden.estado === "PAGADO") &&
+                          orden.saldo != null && 
+                          orden.saldo > 0 && ( 
+                            <button
+                              onClick={() => handleAbrirModalPago(orden.id)}
+                              className="btn btn-success btn-xs"
+                              title="Registrar Pago"
+                            >
+                              Pagar
+                            </button>
+                          )}
                       </div>
                     </td>
                   </tr>
@@ -339,7 +363,6 @@ export default function OrdenPagoPage() {
           </table>
         </div>
 
-        {/* Modales */}
         <RegistrarOrdenPagoModal
           isOpen={showModalRegistrar}
           onClose={() => setShowModalRegistrar(false)}
@@ -365,6 +388,7 @@ export default function OrdenPagoPage() {
           orden={ordenSeleccionada}
           onSubmit={handleRegistrarPago}
         />
+        
       </main>
     </div>
   );
