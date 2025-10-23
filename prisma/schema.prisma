@@ -140,20 +140,22 @@ model TipoComprobanteProveedor {
 }
 
 model ComprobanteProveedor {
-  id                  Int      @id @default(autoincrement())
-  id_proveedor        Int
+  id                  Int      @id @default(autoincrement()) // [cite: 13]
+  id_proveedor        Int // [cite: 15]
   id_tipo_comprobante Int
-  id_orden_compra     Int?
-  fecha               DateTime
+  id_orden_compra     Int? // 
+  fecha               DateTime // [cite: 14]
   letra               String   @db.VarChar(1)
   sucursal            String   @db.VarChar(4)
   numero              String   @db.VarChar(8)
   total               Int
 
-  proveedor        Proveedor                     @relation(fields: [id_proveedor], references: [id])
+  id_orden_pago       Int?      
+  orden_pago          OrdenPago?  @relation(fields: [id_orden_pago], references: [id]) // <-- AÑADIR: Nueva relación
+
+  proveedor        Proveedor                     @relation(fields: [id_proveedor], references: [id]) // [cite: 15]
   tipo_comprobante TipoComprobanteProveedor      @relation(fields: [id_tipo_comprobante], references: [id])
-  orden_pago       OrdenPago?
-  orden_compra     OrdenCompra?                  @relation(fields: [id_orden_compra], references: [id])
+  orden_compra     OrdenCompra?                  @relation(fields: [id_orden_compra], references: [id]) // 
   detalles         DetalleComprobanteProveedor[]
 }
 
@@ -179,13 +181,12 @@ model OrdenPago {
   id             Int             @id @default(autoincrement())
   numero         String
   fecha          DateTime
-  estado         EstadoOrdenPago
-  saldo          Int?
-  total          Int
-  id_comprobante Int             @unique
+  estado         EstadoOrdenPago // [cite: 18]
+  saldo          Int? // 
+  total          Int // 
   id_proveedor   Int
 
-  comprobante     ComprobanteProveedor? @relation(fields: [id_comprobante], references: [id])
+  comprobantes    ComprobanteProveedor[] 
   proveedor       Proveedor             @relation(fields: [id_proveedor], references: [id])
   historial_pagos HistorialPago[]
 }
@@ -266,6 +267,7 @@ model VentaArticulo {
   detalle DetalleVentaArticulo[]
 
   user UserEcommerce? @relation(fields: [id_user], references: [id])
+  factura           FacturaVenta?       @relation("VentaFacturaRelation")
 }
 
 model DetalleVentaArticulo {
@@ -298,4 +300,22 @@ model HistorialPago {
   pendiente_por_pagar Int
 
   orden_pago OrdenPago @relation(fields: [id_orden_pago], references: [id])
+}
+
+enum EstadoFacturaVenta {
+  PENDIENTE      // creada al confirmar pedido
+  EN_PREPARACION // en proceso
+  ENVIADA        // despacho
+  ENTREGADA      // entrega finalizada
+  CANCELADA
+}
+
+model FacturaVenta {
+  id              Int               @id @default(autoincrement())
+  numero          String            @unique
+  fecha_emision   DateTime          @default(now())
+  total           Int
+  estado          EstadoFacturaVenta
+  id_venta        Int               @unique
+  venta           VentaArticulo     @relation("VentaFacturaRelation", fields: [id_venta], references: [id])
 }

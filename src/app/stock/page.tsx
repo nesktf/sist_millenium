@@ -17,6 +17,7 @@ type Fila = {
 
 type Deposito = {
   id: number
+  nombre: string
   direccion: string
 }
 
@@ -182,25 +183,8 @@ export default function ConsultarStockPage() {
 
       <h1 className="text-2xl font-bold mt-4 mb-3">Consulta de stock</h1>
 
-      <div className="flex flex-wrap gap-3 items-end mb-4">
-        <div className="flex flex-col">
-          <label className="text-sm font-medium text-base-content/70">
-            Depósito
-          </label>
-          <select
-            value={selectedDeposito}
-            onChange={(e) => handleDepositoChange(e.target.value)}
-            className="select select-bordered select-sm min-w-[220px]"
-          >
-            <option value="">Todos los depósitos</option>
-            {depositos.map((d) => (
-              <option key={d.id} value={String(d.id)}>
-                {d.direccion}
-              </option>
-            ))}
-          </select>
-        </div>
-
+    
+        
         <div className="flex flex-col flex-1 min-w-[220px]">
           <label className="text-sm font-medium text-base-content/70">
             Buscar (código o nombre)
@@ -217,7 +201,7 @@ export default function ConsultarStockPage() {
                   }
                 }}
                 className="flex-1 bg-transparent outline-none text-sm"
-                placeholder="Ej: Paracetamol, 1001A..."
+                placeholder="Ej: abc1234..."
               />
               {searchInput && (
                 <button
@@ -236,9 +220,28 @@ export default function ConsultarStockPage() {
           </div>
         </div>
 
+              <div className="flex flex-wrap gap-3 items-end mb-4">
+        <div className="flex flex-col">
+          <label className="text-sm font-medium text-base-content/70">
+            Depósito
+          </label>
+          <select
+            value={selectedDeposito}
+            onChange={(e) => handleDepositoChange(e.target.value)}
+            className="select select-bordered select-sm min-w-[220px]"
+          >
+            <option value="">Todos los depósitos</option>
+            {depositos.map((d) => (
+              <option key={d.id} value={String(d.id)}>
+                {d.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button
           onClick={handleLimpiarFiltros}
-          className="btn btn-ghost btn-sm text-sm"
+          className="btn btn-sm bg-gray-200 hover:bg-gray-300 text-gray-700 border-none"
         >
           Limpiar filtros
         </button>
@@ -246,11 +249,8 @@ export default function ConsultarStockPage() {
 
       <div className="flex flex-wrap justify-between items-center mb-3 text-sm text-base-content/70">
         <span>
-          {isLoading
-            ? "Cargando resultados..."
-            : `Mostrando ${filas.length === 0 ? 0 : `${desde}-${hasta}`} de ${
-                paginacion.totalItems
-              } registros`}
+          {isLoading && "Cargando resultados..."}
+            
         </span>
         <span>
           {searchValue

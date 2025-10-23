@@ -3,44 +3,102 @@ import Modal from "@/components/Modal";
 import { getTodayAR } from "@/utils/dateUtils";
 import { formatCurrency } from "@/utils/currency";
 
+// --- INTERFAZ DE PROPS (Aquí debe estar "orden") ---
 interface RegistrarPagoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  orden: any;
+  orden: any; // <-- ESTA LÍNEA ES FUNDAMENTAL
   onSubmit: (data: any) => void;
 }
+
+// --- HELPER FUNCTIONS ---
+
+/** Formatea un número para mostrarlo como moneda (ej: $1.234,56) */
+const formatMoney = (amount: number | null | undefined) => {
+  if (typeof amount !== 'number') return '$0';
+  // 'es-AR' usa puntos para miles y coma para decimales
+  return `$${amount.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+/**
+ * Limpia y convierte un string de input (ej: "1.234,50") a un número (ej: 1234.50)
+ */
+const unformatNumberInput = (value: string): number => {
+  if (!value) return 0;
+  const cleaned = value
+    .replace(/\./g, "")   // Quita los puntos de miles
+    .replace(",", ".");  // Reemplaza la coma decimal por un punto
+  return parseFloat(cleaned) || 0;
+};
+
+/**
+ * Formatea un string de input (ej: "1234,5") a un string con puntos (ej: "1.234,5")
+ */
+const formatNumberInput = (value: string): string => {
+  if (!value) return "";
+  const parts = value.split(",");
+  // Formatea la parte entera (quita puntos viejos, quita no-dígitos, convierte a BigInt y formatea)
+  const integerPart = parts[0].replace(/\./g, "").replace(/\D/g, "");
+  const formattedInteger = BigInt(integerPart || "0").toLocaleString("es-AR");
+
+  if (parts.length > 1) {
+    // Si hay parte decimal, la añade (solo dígitos)
+    const decimalPart = parts[1].replace(/\D/g, "");
+    return `${formattedInteger},${decimalPart}`;
+  } else if (value.endsWith(",")) {
+    // Si el usuario acaba de escribir la coma
+    return `${formattedInteger},`;
+  }
+  
+  return formattedInteger;
+};
+
 
 export default function RegistrarPagoModal({
   isOpen,
   onClose,
-  orden,
+  orden, // <-- Y AQUÍ
   onSubmit,
 }: RegistrarPagoModalProps) {
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split("T")[0],
-    monto: "",
+    monto: "", // 'monto' ahora es un string formateado
     forma_pago: "EFECTIVO",
     referencia: "",
   });
 
+  // Asegúrate que saldoPendiente se calcule bien incluso si orden es null al inicio
   const saldoPendiente = orden?.saldo || 0;
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+
+    if (name === "monto") {
+      // Aplicar formato mientras se escribe
+      const formattedValue = formatNumberInput(value);
+      setFormData({ ...formData, [name]: formattedValue });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.monto || parseFloat(formData.monto) <= 0) {
+    // Usar el helper para obtener el número real
+    const montoNum = unformatNumberInput(formData.monto);
+
+    if (!formData.monto || montoNum <= 0) {
       alert("Por favor, ingrese un monto válido");
       return;
     }
 
-    if (parseFloat(formData.monto) > saldoPendiente) {
+    if (montoNum > saldoPendiente) {
       alert("El monto no puede ser mayor al saldo pendiente");
       return;
     }
@@ -48,7 +106,7 @@ export default function RegistrarPagoModal({
     onSubmit({
       id_orden_pago: orden.id,
       fecha: formData.fecha,
-      monto: parseFloat(formData.monto),
+      monto: montoNum, // Enviar el número limpio
       forma_pago: formData.forma_pago,
       referencia: formData.referencia || undefined,
     });
@@ -64,7 +122,8 @@ export default function RegistrarPagoModal({
   };
 
   const handlePagarTotal = () => {
-    setFormData({ ...formData, monto: saldoPendiente.toString() });
+    // Usar toLocaleString para obtener el formato regional correcto
+    setFormData({ ...formData, monto: saldoPendiente.toLocaleString('es-AR') });
   };
 
   useEffect(() => {
@@ -101,16 +160,18 @@ export default function RegistrarPagoModal({
           </div>
           <div>
             <span className="font-semibold">Proveedor:</span>{" "}
-            {orden.proveedor?.nombre || orden.comprobante?.proveedor?.nombre || "-"}
+            {orden.proveedor?.nombre ||
+              orden.comprobante?.proveedor?.nombre ||
+              "-"}
           </div>
           <div>
             <span className="font-semibold">Total:</span>{" "}
-            {formatCurrency(orden.total ?? 0)}
+            {formatMoney(orden.total || 0)}
           </div>
           <div>
             <span className="font-semibold">Saldo Pendiente:</span>{" "}
             <span className="text-warning font-bold">
-              {formatCurrency(saldoPendiente)}
+              {formatMoney(saldoPendiente)}
             </span>
           </div>
         </div>
@@ -131,6 +192,7 @@ export default function RegistrarPagoModal({
           />
         </div>
 
+        {/* --- CAMPO DE MONTO MODIFICADO --- */}
         <div className="form-control w-full">
           <label className="label">
             <span className="label-text">Monto a Pagar *</span>
@@ -143,23 +205,23 @@ export default function RegistrarPagoModal({
             </button>
           </label>
           <input
-            type="number"
+            type="text" // Cambiado a text
+            inputMode="decimal" // Teclado numérico en móvil
             name="monto"
             value={formData.monto}
             onChange={handleChange}
-            min="0"
-            max={saldoPendiente}
-            step="0.01"
             className="input input-bordered w-full"
-            placeholder="Ingrese el monto"
+            placeholder="Ingrese el monto (ej: 1.234,50)"
             required
           />
           <label className="label">
             <span className="label-text-alt">
-              Máximo: {formatCurrency(saldoPendiente)}
+              Máximo: {formatMoney(saldoPendiente)}
             </span>
           </label>
         </div>
+        {/* --- FIN CAMPO MODIFICADO --- */}
+
 
         <div className="form-control w-full">
           <label className="label">

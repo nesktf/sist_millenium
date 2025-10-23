@@ -69,7 +69,7 @@ export async function GET(req: Request) {
       articulo: f.articulo.nombre,
       categoria: f.articulo.categoria?.nombre ?? "-",
       marca: f.articulo.marca?.nombre ?? "-",
-      deposito: f.deposito.direccion,
+      deposito: f.deposito.nombre,
       stock: f.stock,
       stock_min: f.stock_min,
       estado: f.stock >= f.stock_min ? "OK" : "REPONER",
@@ -90,6 +90,8 @@ export async function GET(req: Request) {
     return NextResponse.json(
       { error: e?.message ?? "Error interno" },
       { status: 500 },
-    )
+     )
   }
-}
+} 
+
+
