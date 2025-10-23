@@ -17,6 +17,16 @@ export default function Sidebar() {
 
       {/* Menú */}
       <nav className="flex-1 overflow-y-auto px-2 py-4">
+        {/* Dashboard */}
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="block px-4 py-2 text-left font-semibold rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
+          >
+            Dashboard
+          </Link>
+        </div>
+
         {/* Ecommerce */}
         <div className="mb-4">
           <Link
