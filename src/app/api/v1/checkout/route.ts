@@ -289,11 +289,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // 🔹 Crear la factura de venta asociada a esta venta
+    const factura = await prisma.facturaVenta.create({
+      data: {
+        numero: `FAC-${Date.now()}`,
+        total: venta.total,
+        estado: "PENDIENTE", // usar tu enum EstadoFacturaVenta
+        id_venta: venta.id,
+      },
+    });
+
     return NextResponse.json(
       {
         id: venta.id,
         numero: venta.numero,
         total: venta.total,
+        factura: factura.numero,
+        estado: factura.estado,
       },
       { status: 201 }
     );
