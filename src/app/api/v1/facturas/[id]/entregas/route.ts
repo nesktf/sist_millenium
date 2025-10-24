@@ -11,7 +11,7 @@ export async function PATCH(
   }
 
   try {
-    // Buscar la factura con su venta y detalles, incluyendo el nombre de los artículos
+    // Buscar la factura con su venta y detalles
     const factura = await prisma.facturaVenta.findUnique({
       where: { id: facturaId },
       include: {
@@ -30,80 +30,99 @@ export async function PATCH(
       );
     }
 
-    // Validar estado
-    if (factura.estado === "ENTREGADA" || factura.estado === "CANCELADA") {
+    // Verificar que la factura no esté cerrada
+    if (["ENTREGADA", "CANCELADA"].includes(factura.estado)) {
       return NextResponse.json(
         { error: "No se puede modificar una factura cerrada." },
         { status: 400 }
       );
     }
 
-    // 🔹 Validar que todos los artículos existan en el depósito principal antes de actualizar
+    // Verificar existencia y stock suficiente en depósito principal (id = 1)
     for (const detalle of factura.venta.detalle) {
-      const articDepos = await prisma.articDepos.findFirst({
+      const articuloDepos = await prisma.articDepos.findFirst({
         where: { id_articulo: detalle.id_articulo, id_deposito: 1 },
       });
 
-      if (!articDepos) {
+      if (!articuloDepos) {
         return NextResponse.json(
           {
-            error: `No se encontró el artículo "${detalle.articulo?.nombre}" en el depósito principal`,
+            error: `No se encontró el artículo "${detalle.articulo?.nombre}" en el depósito principal.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      if (articuloDepos.stock < detalle.cantidad) {
+        return NextResponse.json(
+          {
+            error: `Stock insuficiente para el artículo "${detalle.articulo?.nombre}". Disponible: ${articuloDepos.stock}, requerido: ${detalle.cantidad}.`,
           },
           { status: 400 }
         );
       }
     }
 
-    // 🔹 Si pasaron todas las validaciones, actualizar estado a ENTREGADA
-    const facturaActualizada = await prisma.facturaVenta.update({
-      where: { id: facturaId },
-      data: { estado: "ENTREGADA" },
+    // Buscar tipo de operación de egreso
+    const tipoOperacion = await prisma.tipoOperacion.findFirst({
+      where: { naturaleza: "EGRESO" },
     });
 
-    // 🔹 Descontar stock y registrar movimientos
-    for (const detalle of factura.venta.detalle) {
-      const articDepos = await prisma.articDepos.findFirst({
-        where: { id_articulo: detalle.id_articulo, id_deposito: 1 },
+    if (!tipoOperacion) {
+      return NextResponse.json(
+        { error: "No existe tipo de operación EGRESO." },
+        { status: 500 }
+      );
+    }
+
+    // Transacción: actualizar factura + descontar stock + registrar movimientos
+    const resultado = await prisma.$transaction(async (tx) => {
+      // Actualizar estado de factura
+      const facturaActualizada = await tx.facturaVenta.update({
+        where: { id: facturaId },
+        data: { estado: "ENTREGADA" },
       });
 
-      if (articDepos) {
-        await prisma.articDepos.update({
-          where: { id: articDepos.id },
-          data: { stock: Math.max(0, articDepos.stock - detalle.cantidad) },
+      // Crear movimiento principal
+      const movimiento = await tx.movimientoStock.create({
+        data: {
+          id_deposito: 1,
+          fecha_hora: new Date(),
+          id_tipo_operacion: tipoOperacion.id,
+          num_comprobante: factura.numero,
+        },
+      });
+
+      // Iterar por cada detalle y aplicar cambios
+      for (const detalle of factura.venta.detalle) {
+        const articuloDepos = await tx.articDepos.findFirst({
+          where: { id_articulo: detalle.id_articulo, id_deposito: 1 },
         });
 
-        const tipoOperacion = await prisma.tipoOperacion.findFirst({
-          where: { naturaleza: "EGRESO" },
+        if (!articuloDepos) continue;
+
+        await tx.articDepos.update({
+          where: { id: articuloDepos.id },
+          data: { stock: articuloDepos.stock - detalle.cantidad },
         });
 
-        if (!tipoOperacion) {
-          return NextResponse.json(
-            { error: "No existe operación de tipo EGRESO" },
-            { status: 500 }
-          );
-        }
-
-        await prisma.movimientoStock.create({
+        await tx.detalleMovimiento.create({
           data: {
-            id_deposito: 1,
-            fecha_hora: new Date(),
-            id_tipo_operacion: tipoOperacion.id,
-            num_comprobante: factura.numero,
-            detalles_mov: {
-              create: {
-                id_artic_depos: articDepos.id,
-                cantidad: detalle.cantidad,
-              },
-            },
+            id_movimiento: movimiento.id,
+            id_artic_depos: articuloDepos.id,
+            cantidad: detalle.cantidad,
           },
         });
       }
-    }
+
+      return facturaActualizada;
+    });
 
     return NextResponse.json(
       {
-        message: "Entrega registrada y stock actualizado.",
-        factura: facturaActualizada,
+        message:
+          "Factura entregada, stock actualizado y movimientos registrados.",
+        factura: resultado,
       },
       { status: 200 }
     );

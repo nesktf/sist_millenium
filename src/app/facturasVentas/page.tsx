@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/utils/currency";
 import FacturaDetalle from "@/components/FacturaDetalle";
 
 type Factura = {
@@ -121,7 +122,7 @@ export default function FacturasTable() {
                 <tr key={factura.id}>
                   <td>{factura.id}</td>
                   <td>{factura.numero}</td>
-                  <td>${factura.total}</td>
+                  <td>{formatCurrency(factura.total)}</td>
                   <td>{factura.estado}</td>
                   <td className="flex gap-2">
                     <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatCurrency } from "@/utils/currency";
 
 interface Detalle {
   id: number;
@@ -96,7 +97,7 @@ export default function FacturaDetalle({
                   <tr key={d.id}>
                     <td>{d.nombreArticulo}</td>
                     <td>{d.cantidad}</td>
-                    <td>${d.precio}</td>
+                    <td>{formatCurrency(d.precio)}</td>
                   </tr>
                 ))}
               </tbody>
