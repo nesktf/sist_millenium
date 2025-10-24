@@ -1,4 +1,5 @@
 import Modal from "@/components/Modal";
+import { formatCurrency } from "@/utils/currency";
 
 interface DetalleComprobanteModalProps {
   isOpen: boolean;

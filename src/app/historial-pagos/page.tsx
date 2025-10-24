@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import DetalleOrdenModal from "@/components/pagos/DetalleOrdenModal";
 import { formatDateAR } from "@/utils/dateUtils";
+import { formatCurrency } from "@/utils/currency";
 
 // --- INTERFAZ (con la corrección de 'comprobantes' plural) ---
 interface HistorialPago {

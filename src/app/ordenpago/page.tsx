@@ -6,6 +6,7 @@ import RegistrarOrdenPagoModal from "@/components/pagos/RegistrarOrdenPagoModal"
 import DetalleOrdenModal from "@/components/pagos/DetalleOrdenModal";
 import RegistrarPagoModal from "@/components/pagos/RegistrarPagoModal";
 import { formatDateAR } from "@/utils/dateUtils";
+import { formatCurrency } from "@/utils/currency";
 
 // --- INTERFACES ---
 interface OrdenPago {

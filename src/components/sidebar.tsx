@@ -17,6 +17,16 @@ export default function Sidebar() {
 
       {/* Menú */}
       <nav className="flex-1 overflow-y-auto px-2 py-4">
+        {/* Dashboard */}
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="block px-4 py-2 text-left font-semibold rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
+          >
+            Dashboard
+          </Link>
+        </div>
+
         {/* Ecommerce */}
         <div className="mb-4">
           <Link
@@ -33,6 +43,35 @@ export default function Sidebar() {
           >
             Facturas de ventas
           </Link>
+        </div>
+
+        {/* Reportes */}
+        <div className="mb-4">
+          <button
+            className="w-full flex justify-between items-center px-4 py-2 text-left font-semibold rounded hover:bg-gray-800 transition-colors"
+            onClick={() => toggleMenu("reportes")}
+          >
+            Reportes
+            <span
+              className={`transform transition-transform ${
+                openMenu === "reportes" ? "rotate-90" : ""
+              }`}
+            >
+              ▶
+            </span>
+          </button>
+          {openMenu === "reportes" && (
+            <ul className="mt-2 ml-4 space-y-1 text-gray-200">
+              <li>
+                <Link
+                  href="/reportes/ingresos-egresos"
+                  className="block px-2 py-1 rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
+                >
+                  Ingresos vs. Egresos
+                </Link>
+              </li>
+            </ul>
+          )}
         </div>
 
         {/* Gestión de Depósitos */}

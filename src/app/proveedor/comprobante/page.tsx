@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import RegistrarComprobanteModal from "@/components/comprobantes/RegistrarComprobanteModal";
 import DetalleComprobanteModal from "@/components/comprobantes/DetalleComprobanteModal";
+import { formatCurrency } from "@/utils/currency";
 
 interface Comprobante {
   id: number;
@@ -258,7 +259,7 @@ export default function ComprobanteProveedorPage() {
                     <td>{comp.proveedor.nombre}</td>
                     <td>{new Date(comp.fecha).toLocaleDateString()}</td>
                     <td className="text-right">
-                      ${comp.total?.toLocaleString() || 0}
+                      {formatCurrency(comp.total ?? 0)}
                     </td>
                     <td>
                       {comp.orden_pago ? (

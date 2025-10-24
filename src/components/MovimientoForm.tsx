@@ -255,6 +255,20 @@ export default function MovimientoForm({
           </span>
         )}
       </div>
+      
+      {/* Comprobante */}
+      <div className="form-control">
+        <label className="label">
+          <span className="label-text font-medium">Número de Comprobante</span>
+        </label>
+        <input
+          type="text"
+          className="input input-bordered w-full"
+          value={comprobante}
+          onChange={(e) => setComprobante(e.target.value)}
+          placeholder="Ej: FA-0001-001234"
+        />
+      </div>
 
       {/* Agregar artículos */}
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-4">
@@ -362,19 +376,7 @@ export default function MovimientoForm({
         )}
       </div>
 
-      {/* Comprobante */}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">Número de Comprobante</span>
-        </label>
-        <input
-          type="text"
-          className="input input-bordered w-full"
-          value={comprobante}
-          onChange={(e) => setComprobante(e.target.value)}
-          placeholder="Ej: FA-0001-001234"
-        />
-      </div>
+      
 
       {/* Errores de formulario */}
       {errors.form && (

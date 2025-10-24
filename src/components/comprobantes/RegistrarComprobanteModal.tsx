@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/Modal";
+import { formatCurrency } from "@/utils/currency";
 
 // --- INTERFACES (sin cambios) ---
 interface Articulo {
@@ -337,16 +338,26 @@ export default function RegistrarComprobanteModal({
             <h3 className="text-lg font-semibold mb-2">Datos del Comprobante</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
               <div className="form-control w-full">
-                <label htmlFor="numero" className="label py-1">
-                  <span className="label-text">Número</span>
+                <label htmlFor="id_proveedor" className="label py-1">
+                  <span className="label-text">Proveedor</span>
                 </label>
-                <input
-                  id="numero"
-                  name="numero"
-                  value={headerData.numero}
+                <select
+                  id="id_proveedor"
+                  name="id_proveedor"
+                  value={headerData.id_proveedor}
                   onChange={handleHeaderChange}
-                  className="input input-sm input-bordered w-full"
-                />
+                  className="select select-sm select-bordered w-full"
+                  required
+                >
+                  <option value="" disabled>
+                    Seleccionar proveedor
+                  </option>
+                  {proveedores.map((prov) => (
+                    <option key={prov.id} value={prov.id}>
+                      {prov.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-control w-full">
                 <label htmlFor="fecha" className="label py-1">
@@ -360,6 +371,29 @@ export default function RegistrarComprobanteModal({
                   onChange={handleHeaderChange}
                   className="input input-sm input-bordered w-full"
                 />
+              </div>
+              
+              <div className="form-control w-full">
+                <label htmlFor="id_tipo_comprobante" className="label py-1">
+                  <span className="label-text">Tipo de Comprobante</span>
+                </label>
+                <select
+                  id="id_tipo_comprobante"
+                  name="id_tipo_comprobante"
+                  value={headerData.id_tipo_comprobante}
+                  onChange={handleHeaderChange}
+                  className="select select-sm select-bordered w-full"
+                  required
+                >
+                  <option value="" disabled>
+                    Seleccionar tipo
+                  </option>
+                  {tiposComprobante.map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-control w-full">
                 <label htmlFor="letra" className="label py-1">
@@ -391,49 +425,18 @@ export default function RegistrarComprobanteModal({
                 />
               </div>
               <div className="form-control w-full">
-                <label htmlFor="id_proveedor" className="label py-1">
-                  <span className="label-text">Proveedor</span>
+                <label htmlFor="numero" className="label py-1">
+                  <span className="label-text">Número</span>
                 </label>
-                <select
-                  id="id_proveedor"
-                  name="id_proveedor"
-                  value={headerData.id_proveedor}
+                <input
+                  id="numero"
+                  name="numero"
+                  value={headerData.numero}
                   onChange={handleHeaderChange}
-                  className="select select-sm select-bordered w-full"
-                  required
-                >
-                  <option value="" disabled>
-                    Seleccionar proveedor
-                  </option>
-                  {proveedores.map((prov) => (
-                    <option key={prov.id} value={prov.id}>
-                      {prov.nombre}
-                    </option>
-                  ))}
-                </select>
+                  className="input input-sm input-bordered w-full"
+                />
               </div>
-              <div className="form-control w-full">
-                <label htmlFor="id_tipo_comprobante" className="label py-1">
-                  <span className="label-text">Tipo de Comprobante</span>
-                </label>
-                <select
-                  id="id_tipo_comprobante"
-                  name="id_tipo_comprobante"
-                  value={headerData.id_tipo_comprobante}
-                  onChange={handleHeaderChange}
-                  className="select select-sm select-bordered w-full"
-                  required
-                >
-                  <option value="" disabled>
-                    Seleccionar tipo
-                  </option>
-                  {tiposComprobante.map((tipo) => (
-                    <option key={tipo.id} value={tipo.id}>
-                      {tipo.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              
             </div>
           </div>
           

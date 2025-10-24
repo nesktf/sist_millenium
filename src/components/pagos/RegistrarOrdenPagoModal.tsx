@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/Modal";
 import { getTodayAR } from "@/utils/dateUtils";
+import { formatCurrency } from "@/utils/currency";
 
 // --- INTERFACES ---
 interface Proveedor {

@@ -227,6 +227,26 @@ export default function OrdenCompraPage() {
 
         <div className="p-3 border rounded-md">
           <h2 className="text-lg font-semibold mb-2">Datos de la orden</h2>
+          
+          <div className="form-control w-full">
+            <label htmlFor="id_proveedor" className="label py-1">
+              <span className="label-text">Proveedor</span>
+            </label>
+            <select
+              id="id_proveedor"
+              name="id_proveedor"
+              value={idProveedor}
+              onChange={(e) => setIdProveedor(Number(e.target.value))}
+              className="select select-sm select-bordered w-full"
+            >
+              {proveedores.map((prov) => (
+                <option key={prov.id} value={prov.id}>
+                  {prov.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="form-control w-full">
             <label htmlFor="fecha_esperada" className="label py-1">
               <span className="label-text">Fecha esperada</span>
@@ -260,24 +280,7 @@ export default function OrdenCompraPage() {
             </select>
           </div>
 
-          <div className="form-control w-full">
-            <label htmlFor="id_proveedor" className="label py-1">
-              <span className="label-text">Proveedor</span>
-            </label>
-            <select
-              id="id_proveedor"
-              name="id_proveedor"
-              value={idProveedor}
-              onChange={(e) => setIdProveedor(Number(e.target.value))}
-              className="select select-sm select-bordered w-full"
-            >
-              {proveedores.map((prov) => (
-                <option key={prov.id} value={prov.id}>
-                  {prov.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+          
           <div className="form-control w-full">
             <label htmlFor="forma_pago" className="label py-1">
               <span className="label-text">Forma de pago</span>
