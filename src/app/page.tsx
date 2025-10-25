@@ -7,17 +7,22 @@ import { QuickStatCard } from "@/components/dashboard/QuickStatCard"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
-const fechaFormateada = format(new Date(), "EEEE d 'de' MMMM yyyy", {
-  locale: es,
-})
-
 const statsInitialData = {
   balance: 0,
   ordenesPendientes: 0,
 }
 
 export default function DashboardPage() {
+  const [fechaFormateada, setFechaFormateada] = useState("")
   const [stats, setStats] = useState(statsInitialData)
+
+  useEffect(() => {
+    setFechaFormateada(
+      format(new Date(), "EEEE d 'de' MMMM yyyy", {
+        locale: es,
+      }),
+    )
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -31,8 +36,6 @@ export default function DashboardPage() {
           from: format(startMonth, "yyyy-MM-dd"),
           to: format(today, "yyyy-MM-dd"),
           groupBy: "month",
-          estadoFactura: "ENTREGADA",
-          estadoOrden: "PAGADO",
         })
 
         const [reporteRes, ordenesPendientesRes] = await Promise.all([
@@ -87,7 +90,9 @@ export default function DashboardPage() {
               Supervisá ventas, pagos, stock y reportes del sistema Millenium.
             </p>
           </div>
-          <div className="text-sm text-base-content/70">{fechaFormateada}</div>
+          <div className="text-sm text-base-content/70">
+            {fechaFormateada || ""}
+          </div>
         </div>
         <div className="card bg-base-100 shadow-sm border border-base-200">
           <div className="card-body py-4">
