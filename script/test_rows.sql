@@ -139,8 +139,13 @@ INSERT INTO "Proveedor" (id, nombre, cuit, razon_social, domicilio, email, estad
   (9, 'Iota Suministros', '23-44556677-4', 'Iota Suministros SA', 'Av. Agua 432, Ciudad', 'info@iota.com', 'ACTIVO'),
   (10, 'Kappa Proveedores', '20-55667788-5', 'Kappa Proveedores SRL', 'Calle Fuego 765, Ciudad', 'contacto@kappa.com', 'ACTIVO');
 
-INSERT INTO "TipoComprobanteProveedor" (id, nombre, descripcion) VALUES
-  (1, 'test', 'a funny test');
+INSERT INTO "TipoComprobanteProveedor" (nombre, descripcion) VALUES
+('Factura A', 'Factura tipo A'),
+('Factura B', 'Factura tipo B'),
+('Factura C', 'Factura tipo C'),
+('Nota de Crédito', 'Nota de crédito'),
+('Nota de Débito', 'Nota de débito'),
+('Remito', 'Remito de mercadería');
 
 -- Reset ids
 ALTER SEQUENCE "Deposito_id_seq" RESTART WITH 7;
@@ -151,7 +156,7 @@ ALTER SEQUENCE "ArticDepos_id_seq" RESTART WITH 2;
 ALTER SEQUENCE "MovimientoStock_id_seq" RESTART WITH 2;
 ALTER SEQUENCE "DetalleMovimiento_id_seq" RESTART WITH 3;
 ALTER SEQUENCE "Proveedor_id_seq" RESTART WITH 11;
-ALTER SEQUENCE "TipoComprobanteProveedor_id_seq" RESTART WITH 2;
+ALTER SEQUENCE "TipoComprobanteProveedor_id_seq" RESTART WITH 7;
 
 COMMIT;
 

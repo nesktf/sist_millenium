@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/Modal";
-import { getTodayAR } from "@/utils/dateUtils";
-import { formatCurrency } from "@/utils/currency";
 
-// --- INTERFACES ---
 interface Proveedor {
   id: number;
   nombre: string;
@@ -16,9 +13,19 @@ interface Comprobante {
   sucursal: string;
   numero: string;
   total: number;
+  saldo_pendiente: number;
+  total_pagado: number;
   tipo_comprobante: {
     nombre: string;
   };
+}
+
+interface ComprobanteSeleccionado {
+  id_comprobante: number;
+  monto_pagado: string;
+  saldo_pendiente: number;
+  total: number;
+  comprobante_info: Comprobante;
 }
 
 interface RegistrarOrdenPagoModalProps {
@@ -28,9 +35,6 @@ interface RegistrarOrdenPagoModalProps {
   onSubmit: (data: any) => void;
 }
 
-// --- HELPER FUNCTIONS ---
-
-
 const formatMoney = (amount: number | null | undefined) => {
   if (typeof amount !== 'number') return '$0';
   return `$${amount.toLocaleString('es-AR', {
@@ -39,15 +43,11 @@ const formatMoney = (amount: number | null | undefined) => {
   })}`;
 };
 
-
 const unformatNumberInput = (value: string): number => {
   if (!value) return 0;
-  const cleaned = value
-    .replace(/\./g, "")   // Quita los puntos de miles
-    .replace(",", ".");  // Reemplaza la coma decimal por un punto
+  const cleaned = value.replace(/\./g, "").replace(",", ".");
   return parseFloat(cleaned) || 0;
 };
-
 
 const formatNumberInput = (value: string): string => {
   if (!value) return "";
@@ -65,55 +65,34 @@ const formatNumberInput = (value: string): string => {
   return formattedInteger;
 };
 
-
 export default function RegistrarOrdenPagoModal({
   isOpen,
   onClose,
   proveedores,
   onSubmit,
 }: RegistrarOrdenPagoModalProps) {
-  
   const today = new Date().toISOString().split("T")[0];
 
   const [formData, setFormData] = useState({
-    // Datos de la Orden
     numero: "",
     fecha: today,
     id_proveedor: "",
-    ids_comprobantes: [] as number[],
-    
-    // Datos del Pago
-    fecha_pago: today,
-    monto_pago: "",
     forma_pago: "EFECTIVO",
     referencia: "",
   });
 
-  const [comprobantes, setComprobantes] = useState<Comprobante[]>([]);
+  const [comprobantesDisponibles, setComprobantesDisponibles] = useState<Comprobante[]>([]);
+  const [comprobantesSeleccionados, setComprobantesSeleccionados] = useState<ComprobanteSeleccionado[]>([]);
   const [loadingComprobantes, setLoadingComprobantes] = useState(false);
-  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     if (formData.id_proveedor) {
       fetchComprobantesByProveedor(parseInt(formData.id_proveedor));
     } else {
-      setComprobantes([]);
-      setTotal(0);
-      setFormData(prev => ({ ...prev, ids_comprobantes: [], monto_pago: "" }));
+      setComprobantesDisponibles([]);
+      setComprobantesSeleccionados([]);
     }
   }, [formData.id_proveedor]);
-
-  useEffect(() => {
-    if (formData.ids_comprobantes.length > 0) {
-      const nuevoTotal = comprobantes
-        .filter((c) => formData.ids_comprobantes.includes(c.id))
-        .reduce((acc, curr) => acc + curr.total, 0);
-      setTotal(nuevoTotal);
-    } else {
-      setTotal(0);
-      setFormData(prev => ({ ...prev, monto_pago: "" }));
-    }
-  }, [formData.ids_comprobantes, comprobantes]);
 
   const fetchComprobantesByProveedor = async (id_proveedor: number) => {
     try {
@@ -123,7 +102,7 @@ export default function RegistrarOrdenPagoModal({
       );
       if (res.ok) {
         const data = await res.json();
-        setComprobantes(data);
+        setComprobantesDisponibles(data);
       }
     } catch (error) {
       console.error("Error al cargar comprobantes:", error);
@@ -136,36 +115,68 @@ export default function RegistrarOrdenPagoModal({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleAgregarComprobante = (comprobante: Comprobante) => {
+    const yaExiste = comprobantesSeleccionados.find(
+      c => c.id_comprobante === comprobante.id
+    );
     
-    if (name === "monto_pago") {
-      const formattedValue = formatNumberInput(value);
-      setFormData({ ...formData, [name]: formattedValue });
-    } else {
-      setFormData({ ...formData, [name]: value });
+    if (yaExiste) {
+      alert("Este comprobante ya fue agregado");
+      return;
     }
+
+    setComprobantesSeleccionados([
+      ...comprobantesSeleccionados,
+      {
+        id_comprobante: comprobante.id,
+        monto_pagado: comprobante.saldo_pendiente.toLocaleString('es-AR'),
+        saldo_pendiente: comprobante.saldo_pendiente,
+        total: comprobante.total,
+        comprobante_info: comprobante,
+      },
+    ]);
   };
 
-  const handleComprobanteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const id = parseInt(e.target.value);
-    const isChecked = e.target.checked;
-
-    setFormData((prev) => {
-      const newIds = isChecked
-        ? [...prev.ids_comprobantes, id]
-        : prev.ids_comprobantes.filter((compId) => compId !== id);
-      
-      return { ...prev, ids_comprobantes: newIds };
-    });
+  const handleQuitarComprobante = (id_comprobante: number) => {
+    setComprobantesSeleccionados(
+      comprobantesSeleccionados.filter(c => c.id_comprobante !== id_comprobante)
+    );
   };
 
-  const handlePagarTotal = () => {
-    setFormData({ ...formData, monto_pago: total.toLocaleString('es-AR') });
+  const handleChangeMonto = (id_comprobante: number, value: string) => {
+    const formattedValue = formatNumberInput(value);
+    setComprobantesSeleccionados(
+      comprobantesSeleccionados.map(c =>
+        c.id_comprobante === id_comprobante
+          ? { ...c, monto_pagado: formattedValue }
+          : c
+      )
+    );
+  };
+
+  const handlePagarTotalComprobante = (id_comprobante: number) => {
+    setComprobantesSeleccionados(
+      comprobantesSeleccionados.map(c =>
+        c.id_comprobante === id_comprobante
+          ? { ...c, monto_pagado: c.saldo_pendiente.toLocaleString('es-AR') }
+          : c
+      )
+    );
+  };
+
+  const calcularTotalOrden = () => {
+    return comprobantesSeleccionados.reduce(
+      (sum, c) => sum + unformatNumberInput(c.monto_pagado),
+      0
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validaciones de Orden
     if (!formData.numero.trim()) {
       alert("Por favor, ingrese un número de orden");
       return;
@@ -174,37 +185,34 @@ export default function RegistrarOrdenPagoModal({
       alert("Por favor, seleccione un proveedor");
       return;
     }
-    if (formData.ids_comprobantes.length === 0) {
-      alert("Por favor, seleccione al menos un comprobante");
+    if (comprobantesSeleccionados.length === 0) {
+      alert("Por favor, agregue al menos un comprobante");
       return;
     }
 
-    // Validaciones de Pago
-    const montoNum = unformatNumberInput(formData.monto_pago);
-
-    if (montoNum <= 0) {
-      alert("Por favor, ingrese un monto a pagar válido");
-      return;
+    // Validar montos
+    for (const comp of comprobantesSeleccionados) {
+      const monto = unformatNumberInput(comp.monto_pagado);
+      if (monto <= 0) {
+        alert(`El monto del comprobante ${comp.comprobante_info.letra}-${comp.comprobante_info.sucursal}-${comp.comprobante_info.numero} debe ser mayor a cero`);
+        return;
+      }
+      if (monto > comp.saldo_pendiente) {
+        alert(`El monto del comprobante ${comp.comprobante_info.letra}-${comp.comprobante_info.sucursal}-${comp.comprobante_info.numero} excede el saldo pendiente`);
+        return;
+      }
     }
-    if (montoNum > total) {
-      alert("El monto a pagar no puede ser mayor que el total de la orden");
-      return;
-    }
 
-    // Enviar todos los datos juntos
     onSubmit({
-      // Datos Orden
       numero: formData.numero,
       fecha: formData.fecha,
       id_proveedor: parseInt(formData.id_proveedor),
-      ids_comprobantes: formData.ids_comprobantes,
-      total, // El total calculado
-      
-      // Datos Pago
-      fecha_pago: formData.fecha_pago,
-      monto_pago: montoNum, // El número limpio
       forma_pago: formData.forma_pago,
       referencia: formData.referencia || undefined,
+      comprobantes: comprobantesSeleccionados.map(c => ({
+        id_comprobante: c.id_comprobante,
+        monto_pagado: unformatNumberInput(c.monto_pagado),
+      })),
     });
   };
 
@@ -213,14 +221,11 @@ export default function RegistrarOrdenPagoModal({
       numero: "",
       fecha: today,
       id_proveedor: "",
-      ids_comprobantes: [],
-      fecha_pago: today,
-      monto_pago: "",
       forma_pago: "EFECTIVO",
       referencia: "",
     });
-    setComprobantes([]);
-    setTotal(0);
+    setComprobantesDisponibles([]);
+    setComprobantesSeleccionados([]);
   };
 
   useEffect(() => {
@@ -232,13 +237,12 @@ export default function RegistrarOrdenPagoModal({
   return (
     <Modal onClose={onClose}>
       <div className="max-h-[80vh] overflow-y-auto p-1">
-        <h2 className="text-xl font-bold mb-4">Registrar Orden y Pago</h2>
+        <h2 className="text-xl font-bold mb-4">Registrar Orden de Pago</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* --- SECCIÓN DATOS DE LA ORDEN --- */}
+          {/* Datos de la Orden */}
           <div className="p-3 border rounded-md border-base-300">
-            <h3 className="text-lg font-semibold mb-2">1. Datos de la Orden</h3>
+            <h3 className="text-lg font-semibold mb-2">Datos de la Orden</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
               <div className="form-control w-full">
                 <label className="label py-1">
@@ -257,7 +261,7 @@ export default function RegistrarOrdenPagoModal({
 
               <div className="form-control w-full">
                 <label className="label py-1">
-                  <span className="label-text">Fecha de Orden *</span>
+                  <span className="label-text">Fecha *</span>
                 </label>
                 <input
                   type="date"
@@ -291,147 +295,191 @@ export default function RegistrarOrdenPagoModal({
                 </select>
               </div>
 
-              <div className="form-control w-full md:col-span-2">
+              <div className="form-control w-full">
                 <label className="label py-1">
-                  <span className="label-text">Comprobantes a incluir *</span>
+                  <span className="label-text">Forma de Pago *</span>
                 </label>
-                <div
-                  className="p-2 border rounded-lg border-base-300 bg-base-100 max-h-36 overflow-y-auto space-y-2"
-                  style={{ minHeight: "6rem" }}
+                <select
+                  name="forma_pago"
+                  value={formData.forma_pago}
+                  onChange={handleChange}
+                  className="select select-sm select-bordered w-full"
+                  required
                 >
-                  {!formData.id_proveedor ? (
-                    <span className="text-xs text-base-content/60 p-2 block text-center">
-                      Primero seleccione un proveedor
-                    </span>
-                  ) : loadingComprobantes ? (
-                    <span className="text-xs text-base-content/60 p-2 block text-center">
-                      Cargando...
-                    </span>
-                  ) : comprobantes.length === 0 ? (
-                    <span className="text-xs text-warning p-2 block text-center">
-                      No hay comprobantes sin orden
-                    </span>
-                  ) : (
-                    comprobantes.map((comp) => (
-                      <label
-                        key={comp.id}
-                        className="flex items-center gap-2 p-1.5 rounded hover:bg-base-200 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          value={comp.id}
-                          checked={formData.ids_comprobantes.includes(comp.id)}
-                          onChange={handleComprobanteChange}
-                          className="checkbox checkbox-xs"
-                        />
-                        <span className="text-xs">
-                          {comp.tipo_comprobante.nombre} {comp.letra}-
-                          {comp.sucursal}-{comp.numero} |
-                          <span className="font-semibold ml-1">
-                            {formatMoney(comp.total)}
-                          </span>
-                        </span>
-                      </label>
-                    ))
-                  )}
-                </div>
+                  <option value="EFECTIVO">Efectivo</option>
+                  <option value="TRANSFERENCIA">Transferencia</option>
+                </select>
               </div>
 
-              <div className="form-control w-full md:col-span-2">
+              <div className="form-control w-full">
                 <label className="label py-1">
-                  <span className="label-text">Total de la Orden</span>
+                  <span className="label-text">Referencia (opcional)</span>
                 </label>
                 <input
                   type="text"
-                  value={total > 0 ? formatMoney(total) : "-"}
-                  className="input input-sm input-bordered w-full font-bold"
-                  disabled
+                  name="referencia"
+                  value={formData.referencia}
+                  onChange={handleChange}
+                  className="input input-sm input-bordered w-full"
+                  placeholder="Nº de transferencia, recibo, etc."
                 />
               </div>
             </div>
           </div>
 
-          {/* --- SECCIÓN DATOS DEL PAGO --- */}
+          {/* Comprobantes Disponibles */}
           <div className="p-3 border rounded-md border-base-300">
-            <h3 className="text-lg font-semibold mb-2">2. Datos del Pago</h3>
-
-            <div className="form-control w-full">
-              <label className="label py-1">
-                <span className="label-text">Fecha de Pago *</span>
-              </label>
-              <input
-                type="date"
-                name="fecha_pago"
-                value={formData.fecha_pago}
-                onChange={handleChange}
-                className="input input-sm input-bordered w-full"
-                required
-              />
-            </div>
-
-            <div className="form-control w-full">
-              <label className="label py-1">
-                <span className="label-text">Monto a Pagar *</span>
-                {total > 0 && (
-                  <button
-                    type="button"
-                    onClick={handlePagarTotal}
-                    className="label-text-alt link link-primary"
-                  >
-                    Pagar total ({formatMoney(total)})
-                  </button>
-                )}
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                name="monto_pago"
-                value={formData.monto_pago}
-                onChange={handleChange}
-                className="input input-sm input-bordered w-full"
-                placeholder="0,00"
-                required
-                disabled={total === 0}
-              />
-            </div>
-            
-            <div className="form-control w-full">
-              <label className="label py-1">
-                <span className="label-text">Forma de Pago *</span>
-              </label>
-              <select
-                name="forma_pago"
-                value={formData.forma_pago}
-                onChange={handleChange}
-                className="select select-sm select-bordered w-full"
-                required
-              >
-                <option value="EFECTIVO">Efectivo</option>
-                <option value="TRANSFERENCIA">Transferencia</option>
-              </select>
-            </div>
-
-            <div className="form-control w-full">
-              <label className="label py-1">
-                <span className="label-text">
-                  Referencia{" "}
-                  <span className="text-xs text-base-content/60">(opcional)</span>
+            <h3 className="text-lg font-semibold mb-2">Comprobantes Disponibles</h3>
+            <div
+              className="p-2 border rounded-lg border-base-300 bg-base-100 max-h-48 overflow-y-auto space-y-2"
+              style={{ minHeight: "8rem" }}
+            >
+              {!formData.id_proveedor ? (
+                <span className="text-xs text-base-content/60 p-2 block text-center">
+                  Primero seleccione un proveedor
                 </span>
-              </label>
-              <input
-                type="text"
-                name="referencia"
-                value={formData.referencia}
-                onChange={handleChange}
-                className="input input-sm input-bordered w-full"
-                placeholder="Ej: Nº de transferencia, recibo, etc."
-              />
+              ) : loadingComprobantes ? (
+                <span className="text-xs text-base-content/60 p-2 block text-center">
+                  Cargando...
+                </span>
+              ) : comprobantesDisponibles.length === 0 ? (
+                <span className="text-xs text-warning p-2 block text-center">
+                  No hay comprobantes con saldo pendiente
+                </span>
+              ) : (
+                comprobantesDisponibles.map((comp) => {
+                  const yaSeleccionado = comprobantesSeleccionados.some(
+                    c => c.id_comprobante === comp.id
+                  );
+                  
+                  return (
+                    <div
+                      key={comp.id}
+                      className={`flex items-center justify-between p-2 rounded ${
+                        yaSeleccionado ? 'bg-success/10' : 'hover:bg-base-200'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <span className="text-xs font-semibold">
+                          {comp.tipo_comprobante.nombre} {comp.letra}-{comp.sucursal}-{comp.numero}
+                        </span>
+                        <div className="text-xs text-base-content/70">
+                          Total: {formatMoney(comp.total)} | 
+                          Pagado: {formatMoney(comp.total_pagado)} | 
+                          <span className="font-semibold text-warning">
+                            {' '}Pendiente: {formatMoney(comp.saldo_pendiente)}
+                          </span>
+                        </div>
+                      </div>
+                      {!yaSeleccionado && (
+                        <button
+                          type="button"
+                          onClick={() => handleAgregarComprobante(comp)}
+                          className="btn btn-primary btn-xs ml-2"
+                        >
+                          Agregar
+                        </button>
+                      )}
+                      {yaSeleccionado && (
+                        <span className="badge badge-success badge-sm ml-2">
+                          Agregado
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
+          {/* Comprobantes Seleccionados */}
+          {comprobantesSeleccionados.length > 0 && (
+            <div className="p-3 border rounded-md border-base-300">
+              <h3 className="text-lg font-semibold mb-2">Comprobantes a Pagar</h3>
+              <div className="overflow-x-auto">
+                <table className="table table-xs w-full">
+                  <thead>
+                    <tr>
+                      <th>Comprobante</th>
+                      <th>Saldo Pendiente</th>
+                      <th>Monto a Pagar</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comprobantesSeleccionados.map((comp) => (
+                      <tr key={comp.id_comprobante}>
+                        <td>
+                          <div className="text-xs">
+                            <div className="font-semibold">
+                              {comp.comprobante_info.letra}-
+                              {comp.comprobante_info.sucursal}-
+                              {comp.comprobante_info.numero}
+                            </div>
+                            <div className="text-base-content/70">
+                              {comp.comprobante_info.tipo_comprobante.nombre}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="text-right">
+                          {formatMoney(comp.saldo_pendiente)}
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={comp.monto_pagado}
+                              onChange={(e) =>
+                                handleChangeMonto(comp.id_comprobante, e.target.value)
+                              }
+                              className="input input-xs input-bordered w-24"
+                              placeholder="0,00"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePagarTotalComprobante(comp.id_comprobante)
+                              }
+                              className="btn btn-ghost btn-xs"
+                              title="Pagar total"
+                            >
+                              💯
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuitarComprobante(comp.id_comprobante)
+                            }
+                            className="btn btn-error btn-xs"
+                          >
+                            Quitar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="font-bold">
+                      <td colSpan={2} className="text-right">
+                        Total de la Orden:
+                      </td>
+                      <td colSpan={2}>
+                        {formatMoney(calcularTotalOrden())}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
             <button type="submit" className="btn btn-primary">
-              Registrar Orden
+              Registrar Orden de Pago
             </button>
           </div>
         </form>

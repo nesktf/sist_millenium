@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import {
-  retrieveComprobantesSinOrden,
+  // --- CORREGIDO ---
+  retrieveComprobantesSinPagar, // Se cambió "retrieveComprobantesSinOrden" por "retrieveComprobantesSinPagar"
+  // --- FIN CORRECCIÓN ---
   retrieveComprobantesByProveedor,
 } from "@/prisma/pagos";
 
@@ -13,10 +15,15 @@ export async function GET(req: Request) {
       const comprobantes = await retrieveComprobantesByProveedor(
         parseInt(id_proveedor)
       );
-      return NextResponse.json(comprobantes);
+      // Filtrar solo los que tienen saldo pendiente
+      const sinPagar = comprobantes.filter((c) => c.saldo_pendiente > 0);
+      return NextResponse.json(sinPagar);
     }
 
-    const comprobantes = await retrieveComprobantesSinOrden();
+    // --- CORREGIDO ---
+    const comprobantes = await retrieveComprobantesSinPagar(); // Se llamó a la función correcta
+    // --- FIN CORRECCIÓN ---
+    
     return NextResponse.json(comprobantes);
   } catch (error) {
     console.error("Error al obtener comprobantes sin orden:", error);

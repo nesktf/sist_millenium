@@ -1,6 +1,6 @@
 // app/api/v1/comprobante-proveedor/[id]/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "@/prisma/instance";
+import { retrieveComprobanteWithPaymentInfo } from "@/prisma/pagos";
 
 export async function GET(
   req: Request,
@@ -16,54 +16,7 @@ export async function GET(
       );
     }
 
-    const comprobante = await prisma.comprobanteProveedor.findUnique({
-      where: { id },
-      include: {
-        proveedor: {
-          select: {
-            id: true,
-            nombre: true,
-            cuit: true,
-          },
-        },
-        tipo_comprobante: {
-          select: {
-            id: true,
-            nombre: true,
-            descripcion: true,
-          },
-        },
-        orden_pago: {
-          select: {
-            id: true,
-            numero: true,
-            fecha: true,
-            estado: true,
-            saldo: true,
-            total: true,
-          },
-        },
-        orden_compra: {
-          select: {
-            id: true,
-            precio_total: true,
-            forma_pago: true,
-            fecha_esperada: true,
-          },
-        },
-        detalles: {
-          include: {
-            articulo: {
-              select: {
-                id: true,
-                codigo: true,
-                nombre: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const comprobante = await retrieveComprobanteWithPaymentInfo(id);
 
     if (!comprobante) {
       return NextResponse.json(
