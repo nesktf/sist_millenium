@@ -183,7 +183,7 @@ export default function RegistrarComprobanteModal({
     const [provRes, artRes, tiposRes] = await Promise.all([
       fetch("/api/v1/proveedor"),
       fetch("/api/v1/prod"),
-      fetch("/api/v1/comprobante-proveedor"),
+      fetch("/api/v1/tipo-comprobante-proveedor"), 
     ]);
 
     if (provRes.ok) setProveedores(await provRes.json());

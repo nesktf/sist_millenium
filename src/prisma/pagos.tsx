@@ -1,147 +1,136 @@
 import { prisma } from "./instance";
-import { EstadoOrdenPago, FormaDePago } from "@/generated/prisma";
+import { EstadoOrdenPago, FormaDePago, EstadoComprobanteEnOrden } from "@/generated/prisma";
 
 type DBId = number;
 
 // ==================== ORDEN DE PAGO ====================
 
-// Esta es la interfaz que usaba tu función anterior
+export interface DetalleComprobanteOrden {
+  id_comprobante: number;
+  monto_pagado: number; // Cuánto se paga de este comprobante
+}
+
 export interface OrdenPagoData {
   numero: string;
   fecha: Date;
-  estado: EstadoOrdenPago;
-  saldo?: number;
-  total: number;
-  ids_comprobantes: number[];
   id_proveedor: number;
+  forma_pago: FormaDePago;
+  referencia?: string;
+  comprobantes: DetalleComprobanteOrden[]; // Array de comprobantes con sus montos
 }
-
 
 export async function registerOrdenPago(data: OrdenPagoData): Promise<DBId> {
   return await prisma.$transaction(async (tx) => {
-    // 1. Crear la Orden de Pago
+    // 1. Obtener los comprobantes con sus totales actuales y saldos
+    const comprobantesData = await tx.comprobanteProveedor.findMany({
+      where: {
+        id: { in: data.comprobantes.map(c => c.id_comprobante) },
+        id_proveedor: data.id_proveedor,
+      },
+      include: {
+        ordenes_pago: true, // Para calcular cuánto ya se pagó
+      },
+    });
+
+    if (comprobantesData.length !== data.comprobantes.length) {
+      throw new Error("Algunos comprobantes no existen o no pertenecen al proveedor");
+    }
+
+    // 2. Calcular total de la orden y validar montos
+    let totalOrden = 0;
+    const detallesParaCrear: Array<{
+      id_comprobante: number;
+      total_comprobante: number;
+      monto_pagado: number;
+      saldo_pendiente: number;
+      estado: EstadoComprobanteEnOrden;
+    }> = [];
+
+    for (const detalleOrden of data.comprobantes) {
+      const comprobante = comprobantesData.find(c => c.id === detalleOrden.id_comprobante);
+      if (!comprobante) continue;
+
+      // Calcular cuánto ya se pagó de este comprobante en órdenes anteriores
+      const totalPagadoAntes = comprobante.ordenes_pago.reduce(
+        (sum, op) => sum + op.monto_pagado,
+        0
+      );
+      const saldoActual = comprobante.total - totalPagadoAntes;
+
+      // Validar que no se pague más de lo que debe
+      if (detalleOrden.monto_pagado > saldoActual) {
+        throw new Error(
+          `El monto a pagar del comprobante ${comprobante.letra}-${comprobante.sucursal}-${comprobante.numero} ` +
+          `excede el saldo pendiente (${saldoActual})`
+        );
+      }
+
+      if (detalleOrden.monto_pagado <= 0) {
+        throw new Error("El monto a pagar debe ser mayor a cero");
+      }
+
+      totalOrden += detalleOrden.monto_pagado;
+
+      const nuevoSaldo = saldoActual - detalleOrden.monto_pagado;
+      const estado = nuevoSaldo === 0 
+        ? EstadoComprobanteEnOrden.PAGADO 
+        : totalPagadoAntes > 0 || detalleOrden.monto_pagado < comprobante.total
+          ? EstadoComprobanteEnOrden.PARCIAL
+          : EstadoComprobanteEnOrden.PENDIENTE;
+
+      detallesParaCrear.push({
+        id_comprobante: comprobante.id,
+        total_comprobante: comprobante.total,
+        monto_pagado: detalleOrden.monto_pagado,
+        saldo_pendiente: nuevoSaldo,
+        estado,
+      });
+    }
+
+    // 3. Crear la Orden de Pago
     const orden = await tx.ordenPago.create({
       data: {
         numero: data.numero,
         fecha: data.fecha,
-        estado: data.estado,
-        saldo: data.saldo ?? data.total,
-        total: data.total,
+        estado: EstadoOrdenPago.PAGADO, // Siempre PAGADO porque ya se pagó
+        saldo: 0, // Siempre 0 porque no hay pagos pendientes
+        total: totalOrden,
         id_proveedor: data.id_proveedor,
-      },
-    });
-
-    // 2. Vincular los comprobantes a la nueva orden
-    await tx.comprobanteProveedor.updateMany({
-      where: {
-        id: { in: data.ids_comprobantes },
-        id_proveedor: data.id_proveedor, 
-        id_orden_pago: null,         
-      },
-      data: {
-        id_orden_pago: orden.id,
-      },
-    });
-
-    return orden.id;
-  });
-}
-
-// --- NUEVA INTERFAZ PARA EL FLUJO UNIFICADO ---
-export interface OrdenPagoConPagoData {
-  // Datos Orden
-  numero: string;
-  fecha: Date;
-  id_proveedor: number;
-  ids_comprobantes: number[];
-  total: number;
-  
-  // Datos Pago
-  fecha_pago: Date;
-  monto_pago: number;
-  forma_pago: FormaDePago;
-  referencia?: string;
-}
-
-// --- NUEVA FUNCIÓN PARA EL FLUJO UNIFICADO ---
-export async function registerOrdenPagoConPagoInicial(data: OrdenPagoConPagoData): Promise<DBId> {
-  
-  // 1. Calcular nuevo saldo y estado
-  const nuevoSaldo = data.total - data.monto_pago;
-  
-  const nuevoEstado = (nuevoSaldo <= 0) 
-    ? EstadoOrdenPago.CANCELADO 
-    : EstadoOrdenPago.PAGADO;
-
-  // Validación de seguridad
-  if (nuevoSaldo < 0) {
-    throw new Error("El monto del pago no puede ser mayor al total.");
-  }
-
-  return await prisma.$transaction(async (tx) => {
-    
-    // 2. Crear la Orden de Pago
-    const orden = await tx.ordenPago.create({
-      data: {
-        numero: data.numero,
-        fecha: data.fecha,
-        estado: nuevoEstado,
-        saldo: nuevoSaldo,  
-        total: data.total,
-        id_proveedor: data.id_proveedor,
-      },
-    });
-
-    // 3. Vincular los comprobantes a la nueva orden
-    await tx.comprobanteProveedor.updateMany({
-      where: {
-        id: { in: data.ids_comprobantes },
-        id_proveedor: data.id_proveedor,
-        id_orden_pago: null,
-      },
-      data: {
-        id_orden_pago: orden.id,
-      },
-    });
-
-    // 4. Crear el primer registro en historial de pagos
-    await tx.historialPago.create({
-      data: {
-        fecha: data.fecha_pago,
-        id_orden_pago: orden.id,
-        monto: data.monto_pago,
         forma_pago: data.forma_pago,
         referencia: data.referencia,
-        saldo_anterior: data.total, 
-        pendiente_por_pagar: nuevoSaldo, 
       },
     });
 
-    // 5. Devolver el ID de la orden creada
+    // 4. Crear los registros en la tabla intermedia
+    await tx.comprobanteOrdenPago.createMany({
+      data: detallesParaCrear.map(detalle => ({
+        id_orden_pago: orden.id,
+        ...detalle,
+      })),
+    });
+
     return orden.id;
   });
 }
-
 
 export async function retrieveOrdenPago(id: DBId) {
   return await prisma.ordenPago.findUnique({
     where: { id },
     include: {
-      comprobantes: { 
+      proveedor: true,
+      comprobantes: {
         include: {
-          proveedor: true,
-          tipo_comprobante: true,
-          detalles: {
+          comprobante: {
             include: {
-              articulo: true,
+              tipo_comprobante: true,
+              proveedor: true,
+              detalles: {
+                include: {
+                  articulo: true,
+                },
+              },
             },
           },
-        },
-      },
-      proveedor: true,
-      historial_pagos: {
-        orderBy: {
-          fecha: 'desc',
         },
       },
     },
@@ -156,102 +145,17 @@ export async function retrieveOrdenPagoList(filters?: {
     where: {
       ...(filters?.id_proveedor && { id_proveedor: filters.id_proveedor }),
       ...(filters?.estado && { estado: filters.estado }),
-      estado: {
-        not: EstadoOrdenPago.PENDIENTE
-      }
     },
     include: {
+      proveedor: true,
       comprobantes: {
         include: {
-          proveedor: true,
-          tipo_comprobante: true,
-        },
-      },
-      proveedor: true,
-    },
-    orderBy: {
-      fecha: 'desc',
-    },
-  });
-}
-
-export async function updateOrdenPagoEstado(
-  id: DBId,
-  estado: EstadoOrdenPago
-): Promise<boolean> {
-  try {
-    await prisma.ordenPago.update({
-      where: { id },
-      data: { estado },
-    });
-    return true;
-  } catch (error) {
-    console.error(`Error @ updateOrdenPagoEstado: ${error}`);
-    return false;
-  }
-}
-
-// ==================== HISTORIAL DE PAGOS ====================
-
-export interface HistorialPagoData {
-  fecha: Date;
-  id_orden_pago: number;
-  monto: number;
-  forma_pago: FormaDePago;
-  referencia?: string;
-  saldo_anterior: number;
-  pendiente_por_pagar: number;
-}
-
-export async function registerHistorialPago(
-  data: HistorialPagoData
-): Promise<DBId> {
-  const historial = await prisma.historialPago.create({
-    data: {
-      fecha: data.fecha,
-      id_orden_pago: data.id_orden_pago,
-      monto: data.monto,
-      forma_pago: data.forma_pago,
-      referencia: data.referencia,
-      saldo_anterior: data.saldo_anterior,
-      pendiente_por_pagar: data.pendiente_por_pagar,
-    },
-  });
-  return historial.id;
-}
-
-export async function retrieveHistorialPagosByOrden(id_orden_pago: DBId) {
-  return await prisma.historialPago.findMany({
-    where: { id_orden_pago },
-    include: {
-      orden_pago: {
-        include: {
-          comprobantes: {
+          comprobante: {
             include: {
+              tipo_comprobante: true,
               proveedor: true,
             },
           },
-          proveedor: true,
-        },
-      },
-    },
-    orderBy: {
-      fecha: 'desc',
-    },
-  });
-}
-
-export async function retrieveAllHistorialPagos() {
-  return await prisma.historialPago.findMany({
-    include: {
-      orden_pago: {
-        include: {
-          comprobantes: {
-            include: {
-              proveedor: true,
-            },
-          },
-          proveedor: true,
         },
       },
     },
@@ -263,14 +167,12 @@ export async function retrieveAllHistorialPagos() {
 
 // ==================== COMPROBANTES ====================
 
-export async function retrieveComprobantesSinOrden() {
-  return await prisma.comprobanteProveedor.findMany({
-    where: {
-      orden_pago: null,
-    },
+export async function retrieveComprobantesSinPagar() {
+  const comprobantes = await prisma.comprobanteProveedor.findMany({
     include: {
       proveedor: true,
       tipo_comprobante: true,
+      ordenes_pago: true,
       detalles: {
         include: {
           articulo: true,
@@ -281,16 +183,33 @@ export async function retrieveComprobantesSinOrden() {
       fecha: 'desc',
     },
   });
+
+  // Filtrar solo los que tienen saldo pendiente
+  return comprobantes
+    .map(comp => {
+      const totalPagado = comp.ordenes_pago.reduce(
+        (sum, op) => sum + op.monto_pagado,
+        0
+      );
+      const saldoPendiente = comp.total - totalPagado;
+      
+      return {
+        ...comp,
+        total_pagado: totalPagado,
+        saldo_pendiente: saldoPendiente,
+      };
+    })
+    .filter(comp => comp.saldo_pendiente > 0);
 }
 
 export async function retrieveComprobantesByProveedor(id_proveedor: number) {
-  return await prisma.comprobanteProveedor.findMany({
+  const comprobantes = await prisma.comprobanteProveedor.findMany({
     where: {
       id_proveedor,
-      orden_pago: null,
     },
     include: {
       tipo_comprobante: true,
+      ordenes_pago: true,
       detalles: {
         include: {
           articulo: true,
@@ -301,81 +220,70 @@ export async function retrieveComprobantesByProveedor(id_proveedor: number) {
       fecha: 'desc',
     },
   });
+
+  // Agregar información de pagos
+  return comprobantes.map(comp => {
+    const totalPagado = comp.ordenes_pago.reduce(
+      (sum, op) => sum + op.monto_pagado,
+      0
+    );
+    const saldoPendiente = comp.total - totalPagado;
+    
+    return {
+      ...comp,
+      total_pagado: totalPagado,
+      saldo_pendiente: saldoPendiente,
+    };
+  });
 }
 
-// ==================== HELPER: REGISTRAR PAGO ====================
-
-export async function registrarPago(params: {
-  id_orden_pago: number;
-  monto: number;
-  forma_pago: FormaDePago;
-  fecha: Date;
-  referencia?: string;
-}): Promise<{ success: boolean; error?: string }> {
-  try {
-    return await prisma.$transaction(async (tx) => {
-      // 1. Obtener la orden de pago actual
-      const orden = await tx.ordenPago.findUnique({
-        where: { id: params.id_orden_pago },
-      });
-
-      if (!orden) {
-        return { success: false, error: 'Orden de pago no encontrada' };
-      }
-
-      if (orden.estado === EstadoOrdenPago.CANCELADO) {
-        return { success: false, error: 'Esta orden ya fue pagada completamente' };
-      }
-
-      const saldoAnterior = orden.saldo ?? orden.total;
-      
-      if (saldoAnterior <= 0) {
-        return { success: false, error: 'Esta orden no tiene saldo pendiente' };
-      }
-
-      const pendientePorPagar = saldoAnterior - params.monto;
-
-      if (pendientePorPagar < 0) {
-        return {
-          success: false,
-          error: 'El monto a pagar excede el saldo pendiente',
-        };
-      }
-
-      // 2. Crear el registro en historial de pagos
-      await tx.historialPago.create({
-        data: {
-          fecha: params.fecha,
-          id_orden_pago: params.id_orden_pago,
-          monto: params.monto,
-          forma_pago: params.forma_pago,
-          referencia: params.referencia,
-          saldo_anterior: saldoAnterior,
-          pendiente_por_pagar: pendientePorPagar,
+export async function retrieveComprobanteWithPaymentInfo(id: number) {
+  const comprobante = await prisma.comprobanteProveedor.findUnique({
+    where: { id },
+    include: {
+      proveedor: true,
+      tipo_comprobante: true,
+      orden_compra: true,
+      ordenes_pago: {
+        include: {
+          orden_pago: {
+            include: {
+              proveedor: true,
+            },
+          },
         },
-      });
-
-      // 3. Determinar el nuevo estado
-      const nuevoEstado: EstadoOrdenPago = 
-        pendientePorPagar === 0 
-          ? EstadoOrdenPago.CANCELADO 
-          : orden.estado === EstadoOrdenPago.PENDIENTE 
-            ? EstadoOrdenPago.PAGADO 
-            : orden.estado;
-
-      // 4. Actualizar el saldo de la orden de pago
-      await tx.ordenPago.update({
-        where: { id: params.id_orden_pago },
-        data: {
-          saldo: pendientePorPagar,
-          estado: nuevoEstado,
+        orderBy: {
+          orden_pago: {
+            fecha: 'desc',
+          },
         },
-      });
+      },
+      detalles: {
+        include: {
+          articulo: true,
+        },
+      },
+    },
+  });
 
-      return { success: true };
-    });
-  } catch (error) {
-    console.error(`Error @ registrarPago: ${error}`);
-    return { success: false, error: 'Error al procesar el pago' };
-  }
+  if (!comprobante) return null;
+
+  // Calcular información de pagos
+  const totalPagado = comprobante.ordenes_pago.reduce(
+    (sum, op) => sum + op.monto_pagado,
+    0
+  );
+  const saldoPendiente = comprobante.total - totalPagado;
+  const estadoPago = saldoPendiente === 0 
+    ? 'PAGADO' 
+    : totalPagado > 0 
+      ? 'PARCIAL' 
+      : 'PENDIENTE';
+
+  return {
+    ...comprobante,
+    total_pagado: totalPagado,
+    saldo_pendiente: saldoPendiente,
+    estado_pago: estadoPago,
+  };
 }

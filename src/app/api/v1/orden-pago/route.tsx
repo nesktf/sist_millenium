@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import {
   retrieveOrdenPagoList,
   retrieveOrdenPago,
-  updateOrdenPagoEstado,
-  registerOrdenPagoConPagoInicial, 
+  registerOrdenPago,
 } from "@/prisma/pagos";
-import { EstadoOrdenPago, FormaDePago } from "@/generated/prisma"; 
+import { EstadoOrdenPago, FormaDePago } from "@/generated/prisma";
 
 export async function GET(req: Request) {
   try {
@@ -45,129 +44,66 @@ export async function GET(req: Request) {
   }
 }
 
-
-// --- 2. FUNCIÓN POST COMPLETAMENTE MODIFICADA ---
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
-      // Datos Orden
       numero,
       fecha,
       id_proveedor,
-      ids_comprobantes,
-      total,
-      
-      // Datos Pago
-      fecha_pago,
-      monto_pago,
       forma_pago,
       referencia,
+      comprobantes, // Array de { id_comprobante, monto_pagado }
     } = body;
 
-    // 3. Validación actualizada para todos los campos
+    // Validación
     if (
       !numero ||
       !fecha ||
       !id_proveedor ||
-      !ids_comprobantes || 
-      !Array.isArray(ids_comprobantes) || 
-      ids_comprobantes.length === 0 ||
-      total == null || 
-      
-      // Validar campos de pago
-      !fecha_pago ||
-      monto_pago == null ||
-      !forma_pago
+      !forma_pago ||
+      !comprobantes ||
+      !Array.isArray(comprobantes) ||
+      comprobantes.length === 0
     ) {
       return NextResponse.json(
-        { error: "Faltan datos requeridos para la orden o el pago inicial" },
-        { status: 400 }
-      );
-    }
-    
-    // Validar monto
-    const montoNum = parseFloat(monto_pago);
-    if (montoNum <= 0) {
-      return NextResponse.json(
-        { error: "El monto a pagar debe ser mayor a cero" },
-        { status: 400 }
-      );
-    }
-    if (montoNum > parseFloat(total)) {
-      return NextResponse.json(
-        { error: "El monto a pagar no puede ser mayor al total" },
+        { error: "Faltan datos requeridos para la orden de pago" },
         { status: 400 }
       );
     }
 
+    // Validar que todos los comprobantes tengan monto
+    for (const comp of comprobantes) {
+      if (!comp.id_comprobante || comp.monto_pagado == null || comp.monto_pagado <= 0) {
+        return NextResponse.json(
+          { error: "Todos los comprobantes deben tener un monto válido" },
+          { status: 400 }
+        );
+      }
+    }
 
-    // 4. Llamar a la nueva función de la DB
-    const nuevaOrdenId = await registerOrdenPagoConPagoInicial({
-      // Orden
+    // Crear la orden
+    const nuevaOrdenId = await registerOrdenPago({
       numero,
       fecha: new Date(fecha),
       id_proveedor: parseInt(id_proveedor),
-      ids_comprobantes: ids_comprobantes.map((id: any) => parseInt(id)),
-      total: parseFloat(total), 
-      
-      // Pago
-      fecha_pago: new Date(fecha_pago),
-      monto_pago: montoNum,
       forma_pago: forma_pago as FormaDePago,
-      referencia: referencia,
+      referencia: referencia || undefined,
+      comprobantes: comprobantes.map((c: any) => ({
+        id_comprobante: parseInt(c.id_comprobante),
+        monto_pagado: parseFloat(c.monto_pagado),
+      })),
     });
 
-    // Devolver la orden recién creada
     const nuevaOrden = await retrieveOrdenPago(nuevaOrdenId);
     return NextResponse.json(nuevaOrden, { status: 201 });
-
   } catch (error: any) {
     console.error("Error al crear orden de pago:", error);
-    
-    // Devolver el mensaje de error de la transacción (ej: monto > total)
-    if (error.message.includes("El monto del pago")) {
-        return NextResponse.json(
-            { error: error.message },
-            { status: 400 }
-        );
-    }
-    
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
-    );
-  }
-}
 
-export async function PUT(req: Request) {
-  try {
-    const body = await req.json();
-    const { id, estado } = body;
-
-    if (!id || !estado) {
-      return NextResponse.json(
-        { error: "Falta ID o estado" },
-        { status: 400 }
-      );
+    if (error.message.includes("excede el saldo")) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    const success = await updateOrdenPagoEstado(
-      parseInt(id),
-      estado as EstadoOrdenPago
-    );
-
-    if (!success) {
-      return NextResponse.json(
-        { error: "Error al actualizar orden de pago" },
-        { status: 500 }
-      );
-    }
-
-    const ordenActualizada = await retrieveOrdenPago(parseInt(id));
-    return NextResponse.json(ordenActualizada);
-  } catch (error) {
-    console.error("Error al crear orden de pago:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }

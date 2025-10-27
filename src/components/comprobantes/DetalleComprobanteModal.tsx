@@ -1,5 +1,4 @@
 import Modal from "@/components/Modal";
-import { formatCurrency } from "@/utils/currency";
 
 interface DetalleComprobanteModalProps {
   isOpen: boolean;
@@ -7,7 +6,6 @@ interface DetalleComprobanteModalProps {
   comprobante: any;
 }
 
-// --- HELPER FUNCTIONS ---
 const formatMoney = (amount: number | null | undefined) => {
   if (typeof amount !== 'number') return '$0';
   return `$${amount.toLocaleString('es-AR', {
@@ -28,19 +26,28 @@ export default function DetalleComprobanteModal({
 }: DetalleComprobanteModalProps) {
   if (!isOpen || !comprobante) return null;
 
+  const getEstadoPagoBadge = (estado: string) => {
+    switch (estado) {
+      case "PENDIENTE":
+        return <span className="badge badge-warning">Sin pagar</span>;
+      case "PARCIAL":
+        return <span className="badge badge-info">Pago parcial</span>;
+      case "PAGADO":
+        return <span className="badge badge-success">Pagado completo</span>;
+      default:
+        return <span className="badge badge-neutral">{estado}</span>;
+    }
+  };
+
   return (
     <Modal onClose={onClose}>
       <h2 className="text-xl font-bold mb-4">Detalle del Comprobante</h2>
 
       <div className="space-y-4">
-        {/* Info Comprobante (MODIFICADO) */}
+        {/* Info Comprobante */}
         <div className="bg-base-200 p-4 rounded-lg">
           <h3 className="font-bold mb-2">Información del Comprobante</h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="font-semibold">Tipo:</span>{" "}
-              {comprobante.tipo_comprobante?.nombre || "-"}
-            </div>
             <div>
               <span className="font-semibold">Número:</span>{" "}
               {comprobante.letra}-{comprobante.sucursal}-{comprobante.numero}
@@ -55,55 +62,90 @@ export default function DetalleComprobanteModal({
             </div>
             <div>
               <span className="font-semibold">Total:</span>{" "}
-              {/* --- FORMATO APLICADO --- */}
               {formatMoney(comprobante.total || 0)}
             </div>
             <div>
-              <span className="font-semibold">Estado:</span>{" "}
-              {comprobante.orden_pago ? (
-                <span className="badge badge-success">Con orden de pago</span>
-              ) : (
-                <span className="badge badge-warning">Sin orden de pago</span>
-              )}
+              <span className="font-semibold">Estado de Pago:</span>{" "}
+              {getEstadoPagoBadge(comprobante.estado_pago || "PENDIENTE")}
             </div>
           </div>
         </div>
 
-        {/* Info Orden de Pago (MODIFICADO) */}
-        {comprobante.orden_pago && (
+        {/* Info de Pagos */}
+        {comprobante.total_pagado != null && (
           <div className="bg-base-200 p-4 rounded-lg">
-            <h3 className="font-bold mb-2">Orden de Pago Asociada</h3>
+            <h3 className="font-bold mb-2">Estado de Pagos</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <span className="font-semibold">Número:</span>{" "}
-                {comprobante.orden_pago.numero}
+                <span className="font-semibold">Total del Comprobante:</span>{" "}
+                {formatMoney(comprobante.total || 0)}
               </div>
               <div>
-                <span className="font-semibold">Estado:</span>{" "}
-                {comprobante.orden_pago.estado === "PENDIENTE" && (
-                  <span className="badge badge-warning">Pendiente</span>
-                )}
-                {comprobante.orden_pago.estado === "PAGADO" && (
-                  <span className="badge badge-info">En Pago</span>
-                )}
-                {comprobante.orden_pago.estado === "CANCELADO" && (
-                  <span className="badge badge-success">PAGADO</span>
-                )}
+                <span className="font-semibold">Total Pagado:</span>{" "}
+                <span className="text-success">
+                  {formatMoney(comprobante.total_pagado || 0)}
+                </span>
               </div>
-              <div>
-                <span className="font-semibold">Fecha:</span>{" "}
-                {new Date(comprobante.orden_pago.fecha).toLocaleDateString()}
-              </div>
-              <div>
-                <span className="font-semibold">Saldo:</span>{" "}
-                {/* --- FORMATO APLICADO --- */}
-                {formatMoney(comprobante.orden_pago.saldo || 0)}
+              <div className="col-span-2">
+                <span className="font-semibold">Saldo Pendiente:</span>{" "}
+                <span className={comprobante.saldo_pendiente > 0 ? "text-warning font-bold" : "text-success"}>
+                  {formatMoney(comprobante.saldo_pendiente || 0)}
+                </span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Tabla de Artículos (MODIFICADO) */}
+        {/* Órdenes de Pago Asociadas */}
+        {comprobante.ordenes_pago && comprobante.ordenes_pago.length > 0 && (
+          <div className="bg-base-200 p-4 rounded-lg">
+            <h3 className="font-bold mb-2">Órdenes de Pago</h3>
+            <div className="overflow-x-auto">
+              <table className="table table-xs w-full">
+                <thead>
+                  <tr>
+                    <th>Orden</th>
+                    <th>Fecha</th>
+                    <th>Monto Pagado</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comprobante.ordenes_pago.map((op: any) => (
+                    <tr key={op.id}>
+                      <td>{op.orden_pago?.numero || "-"}</td>
+                      <td>{new Date(op.orden_pago?.fecha).toLocaleDateString()}</td>
+                      <td className="text-right font-semibold text-success">
+                        {formatMoney(op.monto_pagado || 0)}
+                      </td>
+                      <td>
+                        {op.estado === "PENDIENTE" && (
+                          <span className="badge badge-warning badge-xs">Pendiente</span>
+                        )}
+                        {op.estado === "PARCIAL" && (
+                          <span className="badge badge-info badge-xs">Parcial</span>
+                        )}
+                        {op.estado === "PAGADO" && (
+                          <span className="badge badge-success badge-xs">Pagado</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="font-bold">
+                    <td colSpan={2} className="text-right">Total Pagado:</td>
+                    <td colSpan={2}>
+                      {formatMoney(comprobante.total_pagado || 0)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tabla de Artículos */}
         {comprobante.detalles && comprobante.detalles.length > 0 && (
           <div className="bg-base-200 p-4 rounded-lg">
             <h3 className="font-bold mb-2">Artículos del Comprobante</h3>
@@ -125,15 +167,12 @@ export default function DetalleComprobanteModal({
                       <td>{detalle.articulo?.nombre || "-"}</td>
                       <td>{detalle.articulo?.codigo || "-"}</td>
                       <td>
-                        {/* --- FORMATO APLICADO --- */}
                         {formatQuantity(detalle.cantidad)}
                       </td>
                       <td>
-                        {/* --- FORMATO APLICADO --- */}
                         {formatMoney(detalle.precio_unitario || 0)}
                       </td>
                       <td>
-                        {/* --- FORMATO APLICADO --- */}
                         {formatMoney(
                           detalle.cantidad * detalle.precio_unitario
                         )}
@@ -148,7 +187,6 @@ export default function DetalleComprobanteModal({
                       Total:
                     </td>
                     <td colSpan={2}>
-                      {/* --- FORMATO APLICADO --- */}
                       {formatMoney(comprobante.total || 0)}
                     </td>
                   </tr>
@@ -158,7 +196,7 @@ export default function DetalleComprobanteModal({
           </div>
         )}
 
-        {/* Info Orden de Compra (MODIFICADO) */}
+        {/* Info Orden de Compra */}
         {comprobante.orden_compra && (
           <div className="bg-base-200 p-4 rounded-lg">
             <h3 className="font-bold mb-2">Orden de Compra Relacionada</h3>
@@ -169,7 +207,6 @@ export default function DetalleComprobanteModal({
               </div>
               <div>
                 <span className="font-semibold">Total:</span>{" "}
-                {/* --- FORMATO APLICADO --- */}
                 {formatMoney(comprobante.orden_compra.precio_total || 0)}
               </div>
               <div>

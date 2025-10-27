@@ -1,130 +1,126 @@
-// app/api/v1/comprobante-proveedor/route.ts
-"use server";
-
 import { NextResponse } from "next/server";
-import { prisma } from "@/prisma/instance";
+import {
+  retrieveComprobantesSinPagar,
+  retrieveComprobantesByProveedor,
+} from "@/prisma/pagos";
+import { prisma } from "@/prisma/instance"; // Importamos prisma
 
-export async function GET() {
+// --- TU FUNCIÓN GET EXISTENTE ---
+export async function GET(req: Request) {
   try {
-    const tipos = await prisma.tipoComprobanteProveedor.findMany({
-      orderBy: { nombre: 'asc' },
-    });
+    const { searchParams } = new URL(req.url);
+    const id_proveedor = searchParams.get("id_proveedor");
 
-    return NextResponse.json(
-      tipos.map((tipo) => ({
-        id: tipo.id,
-        nombre: tipo.nombre,
-        descripcion: tipo.descripcion,
-      }))
-    );
+    if (id_proveedor) {
+      const comprobantes = await retrieveComprobantesByProveedor(
+        parseInt(id_proveedor)
+      );
+      // Filtrar solo los que tienen saldo pendiente
+      const sinPagar = comprobantes.filter((c) => c.saldo_pendiente > 0);
+      return NextResponse.json(sinPagar);
+    }
+
+    const comprobantes = await retrieveComprobantesSinPagar();
+    return NextResponse.json(comprobantes);
   } catch (error) {
-    console.error('Error al obtener tipos de comprobante:', error);
+    console.error("Error al obtener comprobantes sin pagar:", error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: "Error interno del servidor" },
       { status: 500 }
     );
   }
 }
 
+// --- NUEVA FUNCIÓN POST ---
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { id_proveedor, id_tipo_comprobante, sucursal, fecha, letra, numero, detalles } = body;
+    const {
+      numero,
+      fecha,
+      letra,
+      sucursal,
+      id_proveedor,
+      id_tipo_comprobante,
+      detalles, // Array: { id_articulo, cantidad, precio_unitario, observacion }
+    } = body;
 
-    if (!id_proveedor || !id_tipo_comprobante || !sucursal || !fecha || !letra || !numero || !Array.isArray(detalles) || detalles.length === 0) {
-      return NextResponse.json({ error: "Faltan datos requeridos." }, { status: 400 });
+    // 1. Validación básica de datos
+    if (
+      !fecha ||
+      !letra ||
+      !sucursal ||
+      !id_proveedor ||
+      !id_tipo_comprobante ||
+      !detalles ||
+      detalles.length === 0
+    ) {
+      return NextResponse.json(
+        { error: "Faltan datos requeridos" },
+        { status: 400 }
+      );
     }
 
-    const parsedProveedor = Number(id_proveedor);
-    if (!Number.isInteger(parsedProveedor) || parsedProveedor <= 0) {
-      return NextResponse.json({ error: "Proveedor inválido." }, { status: 400 });
-    }
-
-    const parsedTipoComprobante = Number(id_tipo_comprobante);
-    if (!Number.isInteger(parsedTipoComprobante) || parsedTipoComprobante <= 0) {
-      return NextResponse.json({ error: "Tipo de comprobante inválido." }, { status: 400 });
-    }
-
-    const sucursalTrimmed = String(sucursal).trim();
-    if (!sucursalTrimmed) {
-      return NextResponse.json({ error: "Sucursal inválida." }, { status: 400 });
-    }
-
-    const parsedDate = new Date(fecha);
-    if (Number.isNaN(parsedDate.getTime())) {
-      return NextResponse.json({ error: "Fecha inválida." }, { status: 400 });
-    }
-
-    const parsedDetalles = detalles.map((detalle: any, index: number) => {
-      const { id_articulo, cantidad, precio_unitario, observacion } = detalle ?? {};
-
-      const parsedArticulo = Number(id_articulo);
-      if (!Number.isInteger(parsedArticulo) || parsedArticulo <= 0) {
-        throw new Error(`Artículo inválido en el renglón ${index + 1}`);
+    // 2. Calcular el total en el backend (más seguro)
+    let totalCalculado = 0;
+    for (const detalle of detalles) {
+      if (
+        !detalle.id_articulo ||
+        !detalle.cantidad ||
+        detalle.precio_unitario == null || // puede ser 0
+        detalle.cantidad <= 0
+      ) {
+        return NextResponse.json(
+          { error: "Detalles del comprobante inválidos" },
+          { status: 400 }
+        );
       }
+      totalCalculado += detalle.cantidad * detalle.precio_unitario;
+    }
 
-      const parsedCantidad = Number(cantidad);
-      if (!Number.isFinite(parsedCantidad) || parsedCantidad <= 0) {
-        throw new Error(`Cantidad inválida en el renglón ${index + 1}`);
-      }
-
-      const parsedPrecio = Number(precio_unitario);
-      if (!Number.isFinite(parsedPrecio) || parsedPrecio <= 0) {
-        throw new Error(`Precio inválido en el renglón ${index + 1}`);
-      }
-
-      return {
-        id_articulo: parsedArticulo,
-        cantidad: Math.round(parsedCantidad),
-        precio_unitario: Math.round(parsedPrecio),
-        observacion: typeof observacion === "string" && observacion.trim().length > 0 ? observacion.trim() : null,
-      };
-    });
-
-    const total = parsedDetalles.reduce(
-      (acc, detalle) => acc + detalle.cantidad * detalle.precio_unitario,
-      0
-    );
-
-    const resultado = await prisma.$transaction(async (tx) => {
-      const nuevoComprobante = await tx.comprobanteProveedor.create({
-        data: {
-          id_proveedor: parsedProveedor,
-          id_tipo_comprobante: parsedTipoComprobante,
-          fecha: parsedDate,
-          letra,
-          sucursal: sucursalTrimmed,
-          numero,
-          total: Math.round(total),
+    // 3. Crear el comprobante y sus detalles en una transacción
+    const nuevoComprobante = await prisma.comprobanteProveedor.create({
+      data: {
+        numero: numero || "", // Asumimos que puede ser opcional
+        fecha: new Date(fecha),
+        letra,
+        sucursal,
+        total: totalCalculado,
+        id_proveedor: parseInt(id_proveedor),
+        id_tipo_comprobante: parseInt(id_tipo_comprobante),
+        // Crear los detalles relacionados
+        detalles: {
+          createMany: {
+            data: detalles.map((d: any) => ({
+              id_articulo: parseInt(d.id_articulo),
+              cantidad: d.cantidad,
+              precio_unitario: d.precio_unitario,
+              observacion: d.observacion || null,
+            })),
+          },
         },
-      });
-
-      await tx.detalleComprobanteProveedor.createMany({
-        data: parsedDetalles.map((detalle) => ({
-          id_comprobante: nuevoComprobante.id,
-          ...detalle,
-        })),
-      });
-
-      return nuevoComprobante;
+      },
+      include: {
+        detalles: true, // Devolver los detalles creados
+      },
     });
 
-    return NextResponse.json(
-      {
-        ...resultado,
-        total,
-      },
-      { status: 201 }
-    );
-  } catch (error: any) {
+    // 4. Devolver respuesta exitosa
+    return NextResponse.json(nuevoComprobante, { status: 201 });
+    
+  } catch (error) {
     console.error("Error al crear comprobante:", error);
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    const status = error instanceof Error && /inválid/i.test(message)
-      ? 400
-      : 500;
+    // Manejo de errores (ej. si el id_proveedor no existe)
+    if (error instanceof Error) {
+      // @ts-ignore
+      if (error.code === 'P2003') { // Error de Foreign Key (ej. proveedor no existe)
+         return NextResponse.json({ error: "El proveedor o tipo de comprobante no existe" }, { status: 404 });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json(
-      { error: message },
-      { status }
+      { error: "Error interno del servidor" },
+      { status: 500 }
     );
   }
 }

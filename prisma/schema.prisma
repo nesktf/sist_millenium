@@ -139,24 +139,47 @@ model TipoComprobanteProveedor {
   comprobantes ComprobanteProveedor[]
 }
 
+// --- NUEVA TABLA INTERMEDIA ---
+enum EstadoComprobanteEnOrden {
+  PENDIENTE  // No se ha pagado nada
+  PARCIAL    // Se ha pagado una parte
+  PAGADO     // Se ha pagado completamente
+}
+
+model ComprobanteOrdenPago {
+  id                  Int                      @id @default(autoincrement())
+  id_comprobante      Int
+  id_orden_pago       Int
+  total_comprobante   Int                      // Total original del comprobante
+  monto_pagado        Int                      // Cuánto se pagó en esta orden
+  saldo_pendiente     Int                      // Cuánto queda por pagar
+  estado              EstadoComprobanteEnOrden
+
+  comprobante ComprobanteProveedor @relation(fields: [id_comprobante], references: [id])
+  orden_pago  OrdenPago            @relation(fields: [id_orden_pago], references: [id])
+
+  @@unique([id_comprobante, id_orden_pago])
+}
+
 model ComprobanteProveedor {
-  id                  Int      @id @default(autoincrement()) // [cite: 13]
-  id_proveedor        Int // [cite: 15]
+  id                  Int      @id @default(autoincrement())
+  id_proveedor        Int
   id_tipo_comprobante Int
-  id_orden_compra     Int? // 
-  fecha               DateTime // [cite: 14]
+  id_orden_compra     Int?
+  fecha               DateTime
   letra               String   @db.VarChar(1)
   sucursal            String   @db.VarChar(4)
   numero              String   @db.VarChar(8)
   total               Int
 
-  id_orden_pago       Int?      
-  orden_pago          OrdenPago?  @relation(fields: [id_orden_pago], references: [id]) // <-- AÑADIR: Nueva relación
-
-  proveedor        Proveedor                     @relation(fields: [id_proveedor], references: [id]) // [cite: 15]
-  tipo_comprobante TipoComprobanteProveedor      @relation(fields: [id_tipo_comprobante], references: [id])
-  orden_compra     OrdenCompra?                  @relation(fields: [id_orden_compra], references: [id]) // 
+  // RELACIONES MODIFICADAS
+  proveedor        Proveedor                    @relation(fields: [id_proveedor], references: [id])
+  tipo_comprobante TipoComprobanteProveedor     @relation(fields: [id_tipo_comprobante], references: [id])
+  orden_compra     OrdenCompra?                 @relation(fields: [id_orden_compra], references: [id])
   detalles         DetalleComprobanteProveedor[]
+  
+  // Nueva relación muchos a muchos con órdenes de pago
+  ordenes_pago     ComprobanteOrdenPago[]
 }
 
 model DetalleComprobanteProveedor {
@@ -181,14 +204,20 @@ model OrdenPago {
   id             Int             @id @default(autoincrement())
   numero         String
   fecha          DateTime
-  estado         EstadoOrdenPago // [cite: 18]
-  saldo          Int? // 
-  total          Int // 
+  estado         EstadoOrdenPago
+  saldo          Int?
+  total          Int
   id_proveedor   Int
+  forma_pago     FormaDePago     // Forma de pago de esta orden
+  referencia     String?         @db.VarChar(255) // Referencia del pago
 
-  comprobantes    ComprobanteProveedor[] 
-  proveedor       Proveedor             @relation(fields: [id_proveedor], references: [id])
-  historial_pagos HistorialPago[]
+  proveedor         Proveedor              @relation(fields: [id_proveedor], references: [id])
+  
+  // Nueva relación muchos a muchos con comprobantes
+  comprobantes      ComprobanteOrdenPago[]
+  
+  // Mantener historial_pagos para no romper nada (aunque no se use)
+  historial_pagos   HistorialPago[]
 }
 
 enum FormaDePago {
@@ -231,7 +260,7 @@ model OrdenCompra {
 model UserEcommerce {
   id          Int    @id @default(autoincrement())
   correo      String
-  contraseña String
+  contraseña  String
   nombre      String
   apellido    String
   domicilio   String
@@ -251,13 +280,12 @@ model CarritoUser {
   articulo Articulo      @relation(fields: [id_articulo], references: [id])
 }
 
-
 model VentaArticulo {
-  id      Int      @id @default(autoincrement())
-  numero  String
-  total   Int
-  fecha   DateTime
-  id_user Int?
+  id                Int               @id @default(autoincrement())
+  numero            String
+  total             Int
+  fecha             DateTime
+  id_user           Int?
   metodo_pago       MetodoPagoCliente
   nombre_contacto   String
   apellido_contacto String
@@ -265,9 +293,8 @@ model VentaArticulo {
   telefono_contacto String
 
   detalle DetalleVentaArticulo[]
-
-  user UserEcommerce? @relation(fields: [id_user], references: [id])
-  factura           FacturaVenta?       @relation("VentaFacturaRelation")
+  user    UserEcommerce?         @relation(fields: [id_user], references: [id])
+  factura FacturaVenta?          @relation("VentaFacturaRelation")
 }
 
 model DetalleVentaArticulo {
@@ -289,6 +316,7 @@ model PrecioDeVenta {
   producto Articulo @relation(fields: [id_producto], references: [id])
 }
 
+// Mantener esta tabla aunque no se use activamente
 model HistorialPago {
   id                  Int         @id @default(autoincrement())
   fecha               DateTime
@@ -303,19 +331,19 @@ model HistorialPago {
 }
 
 enum EstadoFacturaVenta {
-  PENDIENTE      // creada al confirmar pedido
-  EN_PREPARACION // en proceso
-  ENVIADA        // despacho
-  ENTREGADA      // entrega finalizada
+  PENDIENTE
+  EN_PREPARACION
+  ENVIADA
+  ENTREGADA
   CANCELADA
 }
 
 model FacturaVenta {
-  id              Int               @id @default(autoincrement())
-  numero          String            @unique
-  fecha_emision   DateTime          @default(now())
-  total           Int
-  estado          EstadoFacturaVenta
-  id_venta        Int               @unique
-  venta           VentaArticulo     @relation("VentaFacturaRelation", fields: [id_venta], references: [id])
+  id            Int                @id @default(autoincrement())
+  numero        String             @unique
+  fecha_emision DateTime           @default(now())
+  total         Int
+  estado        EstadoFacturaVenta
+  id_venta      Int                @unique
+  venta         VentaArticulo      @relation("VentaFacturaRelation", fields: [id_venta], references: [id])
 }

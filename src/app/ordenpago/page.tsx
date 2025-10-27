@@ -4,11 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import RegistrarOrdenPagoModal from "@/components/pagos/RegistrarOrdenPagoModal";
 import DetalleOrdenModal from "@/components/pagos/DetalleOrdenModal";
-import RegistrarPagoModal from "@/components/pagos/RegistrarPagoModal";
-import { formatDateAR } from "@/utils/dateUtils";
-import { formatCurrency } from "@/utils/currency";
 
-// --- INTERFACES ---
 interface OrdenPago {
   id: number;
   numero: string;
@@ -16,16 +12,24 @@ interface OrdenPago {
   estado: "PENDIENTE" | "PAGADO" | "CANCELADO";
   saldo?: number;
   total: number;
+  forma_pago?: string;
+  referencia?: string;
   proveedor?: {
     id: number;
     nombre: string;
   };
   comprobantes?: Array<{
-    letra: string;
-    sucursal: string;
-    numero: string;
-    proveedor: {
-      nombre: string;
+    id: number;
+    monto_pagado: number;
+    saldo_pendiente: number;
+    estado: string;
+    comprobante: {
+      letra: string;
+      sucursal: string;
+      numero: string;
+      tipo_comprobante: {
+        nombre: string;
+      };
     };
   }>;
 }
@@ -35,7 +39,6 @@ interface Proveedor {
   nombre: string;
 }
 
-// --- HELPER DE FORMATO ---
 const formatMoney = (amount: number | null | undefined) => {
   if (typeof amount !== 'number') return '$0';
   return `$${amount.toLocaleString('es-AR', {
@@ -56,7 +59,6 @@ export default function OrdenPagoPage() {
   // Modales
   const [showModalRegistrar, setShowModalRegistrar] = useState(false);
   const [showModalDetalle, setShowModalDetalle] = useState(false);
-  const [showModalPago, setShowModalPago] = useState(false);
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<any>(null);
 
   useEffect(() => {
@@ -139,49 +141,14 @@ export default function OrdenPagoPage() {
     }
   };
 
-  const handleAbrirModalPago = async (id: number) => {
-    try {
-      const res = await fetch(`/api/v1/orden-pago?id=${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setOrdenSeleccionada(data);
-        setShowModalPago(true);
-      }
-    } catch (error) {
-      alert("Error al cargar la orden");
-    }
-  };
-
-  const handleRegistrarPago = async (data: any) => {
-    try {
-      const res = await fetch("/api/v1/historial-pagos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (res.ok) {
-        alert("¡Pago registrado con éxito!");
-        setShowModalPago(false);
-        setOrdenSeleccionada(null);
-        fetchData();
-      } else {
-        const errorData = await res.json();
-        alert(`Error al registrar el pago: ${errorData.error}`);
-      }
-    } catch (error) {
-      alert("Error de conexión al intentar registrar el pago.");
-    }
-  };
-
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
       case "PENDIENTE":
         return <span className="badge badge-warning">Pendiente</span>;
       case "PAGADO":
-        return <span className="badge badge-info">En Pago</span>;
-      case "CANCELADO":
         return <span className="badge badge-success">Pagado</span>;
+      case "CANCELADO":
+        return <span className="badge badge-error">Cancelado</span>;
       default:
         return <span className="badge badge-neutral">{estado}</span>;
     }
@@ -248,8 +215,8 @@ export default function OrdenPagoPage() {
               >
                 <option value="">Todos los estados</option>
                 <option value="PENDIENTE">Pendiente</option>
-                <option value="PAGADO">En Pago</option>
-                <option value="CANCELADO">Pagado</option>
+                <option value="PAGADO">Pagado</option>
+                <option value="CANCELADO">Cancelado</option>
               </select>
             </div>
 
@@ -279,7 +246,7 @@ export default function OrdenPagoPage() {
                 <th>Proveedor</th>
                 <th>Fecha</th>
                 <th>Total</th>
-                <th>Saldo</th>
+                <th>Forma de Pago</th>
                 <th>Estado</th>
                 <th className="text-center">Acciones</th>
               </tr>
@@ -297,12 +264,11 @@ export default function OrdenPagoPage() {
                   <tr key={orden.id}>
                     <td className="font-semibold">{orden.numero}</td>
                     <td>
-                      {/* Lógica de comprobantes plural */}
                       {orden.comprobantes && orden.comprobantes.length > 0 ? (
                         <div className="flex flex-col text-xs">
                           {orden.comprobantes.map((c) => (
-                            <span key={`${c.sucursal}-${c.numero}`}>
-                              {`${c.letra}-${c.sucursal}-${c.numero}`}
+                            <span key={c.id}>
+                              {`${c.comprobante.letra}-${c.comprobante.sucursal}-${c.comprobante.numero}`}
                             </span>
                           ))}
                         </div>
@@ -310,52 +276,21 @@ export default function OrdenPagoPage() {
                         "-"
                       )}
                     </td>
-                    <td>
-                      {orden.proveedor?.nombre ||
-                        orden.comprobantes?.[0]?.proveedor?.nombre ||
-                        "-"}
-                    </td>
+                    <td>{orden.proveedor?.nombre || "-"}</td>
                     <td>{new Date(orden.fecha).toLocaleDateString()}</td>
                     <td className="text-right">
-                      {/* --- FORMATO APLICADO --- */}
                       {formatMoney(orden.total || 0)}
                     </td>
-                    <td className="text-right">
-                      <span
-                        className={
-                          orden.saldo === 0
-                            ? "text-success font-bold"
-                            : "text-warning font-bold"
-                        }
-                      >
-                        {/* --- FORMATO APLICADO --- */}
-                        {formatMoney(orden.saldo || 0)}
-                      </span>
-                    </td>
+                    <td>{orden.forma_pago || "-"}</td>
                     <td>{getEstadoBadge(orden.estado)}</td>
                     <td className="text-center">
-                      {/* Lógica de acciones */}
-                      <div className="flex gap-1 justify-center">
-                        <button
-                          onClick={() => handleVerDetalle(orden.id)}
-                          className="btn btn-info btn-xs"
-                          title="Ver Detalle"
-                        >
-                          Ver
-                        </button>
-                        {(orden.estado === "PENDIENTE" ||
-                          orden.estado === "PAGADO") &&
-                          orden.saldo != null && 
-                          orden.saldo > 0 && ( 
-                            <button
-                              onClick={() => handleAbrirModalPago(orden.id)}
-                              className="btn btn-success btn-xs"
-                              title="Registrar Pago"
-                            >
-                              Pagar
-                            </button>
-                          )}
-                      </div>
+                      <button
+                        onClick={() => handleVerDetalle(orden.id)}
+                        className="btn btn-info btn-xs"
+                        title="Ver Detalle"
+                      >
+                        Ver
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -379,17 +314,6 @@ export default function OrdenPagoPage() {
           }}
           orden={ordenSeleccionada}
         />
-
-        <RegistrarPagoModal
-          isOpen={showModalPago}
-          onClose={() => {
-            setShowModalPago(false);
-            setOrdenSeleccionada(null);
-          }}
-          orden={ordenSeleccionada}
-          onSubmit={handleRegistrarPago}
-        />
-        
       </main>
     </div>
   );
