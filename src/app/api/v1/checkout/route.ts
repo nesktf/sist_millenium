@@ -49,6 +49,33 @@ const generateOrderNumber = () =>
     .toString()
     .padStart(3, "0")}`;
 
+const FACTURA_LETRA = "B"
+const FACTURA_SUCURSAL = "0001"
+const FACTURA_NUMERO_LENGTH = 8
+
+const buildFacturaNumero = (secuencial: number) =>
+  `${FACTURA_LETRA}-${FACTURA_SUCURSAL}-${secuencial
+    .toString()
+    .padStart(FACTURA_NUMERO_LENGTH, "0")}`
+
+async function getNextFacturaNumero() {
+  const ultima = await prisma.facturaVenta.findFirst({
+    orderBy: { id: "desc" },
+    select: {
+      numero: true,
+    },
+  })
+
+  if (!ultima?.numero) {
+    return buildFacturaNumero(1)
+  }
+
+  const partes = ultima.numero.split("-")
+  const ultimoValor = Number(partes[partes.length - 1])
+  const siguiente = Number.isFinite(ultimoValor) ? ultimoValor + 1 : 1
+  return buildFacturaNumero(siguiente)
+}
+
 const isMetodoPagoCliente = (value: string): value is MetodoPagoCliente =>
   Object.values(MetodoPagoCliente).includes(value as MetodoPagoCliente);
 
@@ -289,15 +316,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 🔹 Crear la factura de venta asociada a esta venta
+    const numeroFactura = await getNextFacturaNumero()
     const factura = await prisma.facturaVenta.create({
       data: {
-        numero: `FAC-${Date.now()}`,
+        numero: numeroFactura,
         total: venta.total,
-        estado: "PENDIENTE", // usar tu enum EstadoFacturaVenta
+        estado: "PENDIENTE",
         id_venta: venta.id,
       },
-    });
+    })
 
     return NextResponse.json(
       {

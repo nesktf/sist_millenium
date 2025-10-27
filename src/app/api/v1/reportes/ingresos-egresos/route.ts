@@ -2,7 +2,6 @@
 
 import { NextResponse } from "next/server"
 import { prisma } from "@/prisma/instance"
-import type { EstadoFacturaVenta, EstadoOrdenPago } from "@/generated/prisma"
 
 type GroupByOption = "day" | "month"
 
@@ -25,16 +24,6 @@ const parseISODate = (value: string | null): Date | null => {
   const date = new Date(`${value}T00:00:00`)
   return Number.isNaN(date.getTime()) ? null : date
 }
-
-const VALID_FACTURA_ESTADOS: EstadoFacturaVenta[] = [
-  "PENDIENTE",
-  "EN_PREPARACION",
-  "ENVIADA",
-  "ENTREGADA",
-  "CANCELADA",
-]
-
-const VALID_ORDEN_ESTADOS: EstadoOrdenPago[] = ["PENDIENTE", "PAGADO", "CANCELADO"]
 
 const GROUP_OPTIONS: GroupByOption[] = ["day", "month"]
 
@@ -77,23 +66,10 @@ export async function GET(request: Request) {
       ? (groupByParam as GroupByOption)
       : "month"
 
-    const estadoFacturaParam = searchParams.get("estadoFactura")
-    const estadoFactura =
-      estadoFacturaParam && VALID_FACTURA_ESTADOS.includes(estadoFacturaParam as EstadoFacturaVenta)
-        ? (estadoFacturaParam as EstadoFacturaVenta)
-        : "ENTREGADA"
-
-    const estadoOrdenParam = searchParams.get("estadoOrden")
-    const estadoOrden =
-      estadoOrdenParam && VALID_ORDEN_ESTADOS.includes(estadoOrdenParam as EstadoOrdenPago)
-        ? (estadoOrdenParam as EstadoOrdenPago)
-        : "PAGADO"
-
     const [facturas, ordenes] = await Promise.all([
       prisma.facturaVenta.findMany({
         where: {
           fecha_emision: { gte: from, lte: to },
-          ...(estadoFactura ? { estado: estadoFactura } : {}),
         },
         select: {
           id: true,
@@ -107,7 +83,6 @@ export async function GET(request: Request) {
       prisma.ordenPago.findMany({
         where: {
           fecha: { gte: from, lte: to },
-          ...(estadoOrden ? { estado: estadoOrden } : {}),
         },
         select: {
           id: true,
@@ -178,8 +153,6 @@ export async function GET(request: Request) {
       },
       filtros: {
         groupBy,
-        estadoFactura,
-        estadoOrden,
       },
       resumen: {
         ingresos: totalIngresos,

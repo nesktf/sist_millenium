@@ -38,8 +38,6 @@ interface ReporteResponse {
   }
   filtros: {
     groupBy: GroupByOption
-    estadoFactura: EstadoFactura
-    estadoOrden: EstadoOrden
   }
   resumen: {
     ingresos: number
@@ -68,20 +66,6 @@ interface ReporteResponse {
   }>
 }
 
-const ESTADOS_FACTURA: { value: EstadoFactura; label: string }[] = [
-  { value: "PENDIENTE", label: "Pendiente" },
-  { value: "EN_PREPARACION", label: "En preparación" },
-  { value: "ENVIADA", label: "Enviada" },
-  { value: "ENTREGADA", label: "Entregada" },
-  { value: "CANCELADA", label: "Cancelada" },
-]
-
-const ESTADOS_ORDEN: { value: EstadoOrden; label: string }[] = [
-  { value: "PENDIENTE", label: "Pendiente" },
-  { value: "PAGADO", label: "Pagado" },
-  { value: "CANCELADO", label: "Cancelado" },
-]
-
 const GROUP_BY_OPTIONS: { value: GroupByOption; label: string }[] = [
   { value: "day", label: "Por día" },
   { value: "month", label: "Por mes" },
@@ -90,20 +74,25 @@ const GROUP_BY_OPTIONS: { value: GroupByOption; label: string }[] = [
 const toInputDate = (date: Date) => format(date, "yyyy-MM-dd")
 
 export default function ReporteIngresosEgresos() {
-  const now = new Date()
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-
-  const [from, setFrom] = useState(toInputDate(firstDay))
-  const [to, setTo] = useState(toInputDate(now))
+  const [from, setFrom] = useState("")
+  const [to, setTo] = useState("")
   const [groupBy, setGroupBy] = useState<GroupByOption>("month")
-  const [estadoFactura, setEstadoFactura] = useState<EstadoFactura>("ENTREGADA")
-  const [estadoOrden, setEstadoOrden] = useState<EstadoOrden>("PAGADO")
 
   const [reporte, setReporte] = useState<ReporteResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    const now = new Date()
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+    setFrom(toInputDate(firstDay))
+    setTo(toInputDate(now))
+  }, [])
+
   const fetchReporte = useCallback(async () => {
+    if (!from || !to) {
+      return
+    }
     setIsLoading(true)
     setError(null)
 
@@ -112,8 +101,6 @@ export default function ReporteIngresosEgresos() {
         from,
         to,
         groupBy,
-        estadoFactura,
-        estadoOrden,
       })
 
       const response = await fetch(
@@ -142,7 +129,7 @@ export default function ReporteIngresosEgresos() {
     } finally {
       setIsLoading(false)
     }
-  }, [from, to, groupBy, estadoFactura, estadoOrden])
+  }, [from, to, groupBy])
 
   useEffect(() => {
     fetchReporte()
@@ -176,13 +163,13 @@ export default function ReporteIngresosEgresos() {
       </header>
 
       <section className="bg-base-200 rounded-lg p-4 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="flex flex-col space-y-1">
             <label className="text-sm text-base-content/70">Desde</label>
             <input
               type="date"
-              value={from}
-              max={to}
+              value={from || ""}
+              max={to || undefined}
               onChange={(event) => setFrom(event.target.value)}
               className="input input-bordered input-sm"
             />
@@ -191,8 +178,8 @@ export default function ReporteIngresosEgresos() {
             <label className="text-sm text-base-content/70">Hasta</label>
             <input
               type="date"
-              value={to}
-              min={from}
+              value={to || ""}
+              min={from || undefined}
               onChange={(event) => setTo(event.target.value)}
               className="input input-bordered input-sm"
             />
@@ -211,47 +198,11 @@ export default function ReporteIngresosEgresos() {
               ))}
             </select>
           </div>
-          <div className="flex flex-col space-y-1">
-            <label className="text-sm text-base-content/70">
-              Estado de facturas
-            </label>
-            <select
-              value={estadoFactura}
-              onChange={(event) =>
-                setEstadoFactura(event.target.value as EstadoFactura)
-              }
-              className="select select-bordered select-sm"
-            >
-              {ESTADOS_FACTURA.map((estado) => (
-                <option key={estado.value} value={estado.value}>
-                  {estado.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col space-y-1">
-            <label className="text-sm text-base-content/70">
-              Estado de órdenes de pago
-            </label>
-            <select
-              value={estadoOrden}
-              onChange={(event) =>
-                setEstadoOrden(event.target.value as EstadoOrden)
-              }
-              className="select select-bordered select-sm"
-            >
-              {ESTADOS_ORDEN.map((estado) => (
-                <option key={estado.value} value={estado.value}>
-                  {estado.label}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
         <button
           onClick={fetchReporte}
           className="btn btn-primary btn-sm"
-          disabled={isLoading}
+          disabled={isLoading || !from || !to}
         >
           {isLoading ? "Actualizando..." : "Actualizar"}
         </button>
