@@ -6,6 +6,8 @@ import { Header } from "@/components/Header";
 import { ProductGrid } from "@/components/ProductGrid";
 import { Footer } from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/lib/auth_ctx";
+import { useRouter } from "next/navigation";
 
 export interface ArticuloFrontend {
   id: number;
@@ -20,15 +22,23 @@ export interface ArticuloFrontend {
 export default function ECommercePage() {
   const [articulos, setArticulos] = useState<ArticuloFrontend[]>([]);
   const [searchTerm, setSearchTerm] = useState(""); // estado para el texto de búsqueda
-  const { addToCart, itemCount } = useCart();
+  const { loadCart, addToCart, itemCount } = useCart();
+  const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
+    loadCart();
     fetch("/api/v1/prod") // apunta a tu endpoint GET
       .then((res) => res.json())
       .then((data) => setArticulos(data));
   }, []);
 
   const handleAddToCart = (articulo: ArticuloFrontend) => {
+    if (!user) {
+      router.push("/e-commerce/login")
+      return;
+    }
+
     const precio =
       articulo.precio !== undefined && articulo.precio !== null
         ? Number(articulo.precio)

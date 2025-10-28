@@ -1,6 +1,7 @@
 // src/context/CartContext.tsx
 "use client"; // Muy importante, ya que usaremos hooks de estado y efectos.
 
+import { useAuth } from "@/lib/auth_ctx";
 import { createContext, useState, useContext, ReactNode, useMemo } from "react";
 
 // Primero, definimos la estructura de un artículo en el carrito.
@@ -18,6 +19,7 @@ export interface CartItem {
 // Definimos el tipo para el valor de nuestro contexto.
 interface CartContextType {
   cartItems: CartItem[];
+  loadCart: () => Promise<void>;
   addToCart: (item: Omit<CartItem, "quantity">) => void;
   removeFromCart: (itemId: number) => void;
   updateQuantity: (itemId: number, newQuantity: number) => void;
@@ -33,8 +35,15 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 // Este componente envolverá nuestra aplicación y proveerá el estado del carrito.
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { user } = useAuth();
 
   // --- FUNCIONES PARA MANIPULAR EL CARRITO ---
+  const loadCart = async () => {
+    if (!user) {
+      return;
+    }
+
+  };
 
   // Función para agregar un artículo
   const addToCart = (item: Omit<CartItem, "quantity">) => {
@@ -97,6 +106,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     clearCart,
     itemCount,
     cartTotal,
+    loadCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

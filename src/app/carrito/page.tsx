@@ -19,7 +19,7 @@ export default function CartPage() {
         <p className="mb-6">
           Parece que todavía no has agregado ningún producto.
         </p>
-        <Link href="/" className="btn btn-primary">
+        <Link href="/e-commerce" className="btn btn-primary">
           Ver Productos
         </Link>
       </div>

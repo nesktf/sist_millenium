@@ -15,5 +15,6 @@ TRUNCATE "OrdenCompra" CASCADE;
 TRUNCATE "TipoOperacion" CASCADE;
 TRUNCATE "MovimientoStock" CASCADE;
 TRUNCATE "DetalleMovimiento" CASCADE;
+TRUNCATE "UserEcommerce" CASCADE;
 
 COMMIT;
