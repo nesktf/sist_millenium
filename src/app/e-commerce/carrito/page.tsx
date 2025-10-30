@@ -116,7 +116,7 @@ export default function CartPage() {
               </div>
               <div className="card-actions justify-end mt-4">
                 <Link
-                  href="/carrito/checkout"
+                  href="/e-commerce/checkout"
                   className="btn btn-primary w-full text-center"
                 >
                   Proceder al Pago
