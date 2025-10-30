@@ -19,7 +19,7 @@ export default function CartPage() {
         <p className="mb-6">
           Parece que todavía no has agregado ningún producto.
         </p>
-        <Link href="/" className="btn btn-primary">
+        <Link href="/e-commerce" className="btn btn-primary">
           Ver Productos
         </Link>
       </div>
@@ -116,7 +116,7 @@ export default function CartPage() {
               </div>
               <div className="card-actions justify-end mt-4">
                 <Link
-                  href="/carrito/checkout"
+                  href="/e-commerce/checkout"
                   className="btn btn-primary w-full text-center"
                 >
                   Proceder al Pago

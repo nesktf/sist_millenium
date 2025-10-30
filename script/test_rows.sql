@@ -158,14 +158,6 @@ ALTER SEQUENCE "DetalleMovimiento_id_seq" RESTART WITH 3;
 ALTER SEQUENCE "Proveedor_id_seq" RESTART WITH 11;
 ALTER SEQUENCE "TipoComprobanteProveedor_id_seq" RESTART WITH 7;
 
-COMMIT;
-
--- 6) Chequeo
-SELECT ad.id, a.codigo, d.direccion, ad.stock, ad.stock_min
-FROM "ArticDepos" ad
-JOIN "Articulo" a ON a.id = ad.id_articulo
-JOIN "Deposito" d ON d.id = ad.id_deposito
-ORDER BY a.codigo, d.direccion;
 
 INSERT INTO "PrecioDeVenta" ("id_producto", "precio") VALUES
 (1, 2500000),
@@ -198,3 +190,21 @@ INSERT INTO "PrecioDeVenta" ("id_producto", "precio") VALUES
 (28, 1150000),
 (29, 1300000),
 (30, 950000);
+
+-- Both passwords are "admin"
+INSERT INTO "UserEcommerce"
+  ("id", "correo", "contraseña", "nombre", "apellido", "domicilio")
+VALUES
+  (1, 'admin@admin.com', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'Admin', 'Computer', 'localhost'),
+  (2, 'nitori@kappa.com', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'Nitori', 'Kawashiro', 'Kappa Village 200');
+
+ALTER SEQUENCE "UserEcommerce_id_seq" RESTART WITH 3;
+
+COMMIT;
+
+-- 6) Chequeo
+SELECT ad.id, a.codigo, d.direccion, ad.stock, ad.stock_min
+FROM "ArticDepos" ad
+JOIN "Articulo" a ON a.id = ad.id_articulo
+JOIN "Deposito" d ON d.id = ad.id_deposito
+ORDER BY a.codigo, d.direccion;

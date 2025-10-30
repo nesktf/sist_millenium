@@ -7,6 +7,7 @@ import Swal from "sweetalert2";
 
 import { useCart } from "@/context/CartContext";
 import { formatCurrency } from "@/utils/currency";
+import { useAuth } from "@/lib/auth_ctx";
 
 type PaymentMethodOption = {
   id: string;
@@ -166,6 +167,7 @@ export default function CheckoutPage() {
   );
 
   const hasCartItems = cartItems.length > 0;
+  const { user } = useAuth();
 
   const cartSubtotal = useMemo(
     () =>
@@ -305,10 +307,11 @@ export default function CheckoutPage() {
         cvv: sanitizedCvvValue,
       },
       total: cartSubtotal,
+      userId: user?.id as number,
     };
 
     try {
-      const response = await fetch("/api/v1/checkout", {
+      const response = await fetch("/api/v1/ecommerce/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
