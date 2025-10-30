@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import { APIFormaPago } from "../../app/api/v1/orden-compra/types/route"; // import enum compartido
 
 type ArticuloData = {
@@ -104,32 +105,46 @@ export default function OrdenCompraPage() {
 
   const handleAddEntry = () => {
     if (currEntry.articulo.id === 0) {
-      alert("Selecciona un artículo válido");
+      void Swal.fire({
+        title: "Seleccioná un artículo",
+        text: "Elegí un artículo válido antes de agregarlo a la orden.",
+        icon: "warning",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
     if (currEntry.precio <= 0) {
-      alert("Coloca un precio mayor a 0");
+      void Swal.fire({
+        title: "Precio inválido",
+        text: "Ingresá un precio mayor a cero para el artículo seleccionado.",
+        icon: "warning",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
     if (currEntry.cantidad <= 0) {
-      alert("Coloca una cantidad mayor a 0");
+      void Swal.fire({
+        title: "Cantidad inválida",
+        text: "Ingresá una cantidad mayor a cero para el artículo seleccionado.",
+        icon: "warning",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
-    if (currEntry.precio == 0) {
-      alert("Coloca un precio mayor a 0");
-      return;
-    }
-    if (currEntry.cantidad == 0) {
-      alert("Coloca una cantidad mayor a 0");
-      return;
-    }
-    let prev_entry = entries.find(
+
+    const prev_entry = entries.find(
       (entry) => entry.articulo.id == currEntry.articulo.id
     );
     if (prev_entry) {
-      alert("Seleccionar otro articulo o eliminar el existente");
+      void Swal.fire({
+        title: "Artículo duplicado",
+        text: "Ese artículo ya fue agregado. Eliminá el existente o elegí otro.",
+        icon: "info",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
+
     let new_entries = [
       ...entries,
       {
@@ -162,47 +177,86 @@ export default function OrdenCompraPage() {
   };
 
   const handleSubmit = async () => {
-    const onError = (err: any) => {
-      console.error("❌ Error detallado:", err);
-      alert(`Error: ${err?.error ?? err?.message ?? JSON.stringify(err)}`);
-    };
-    const fechaIso = new Date(fechaEsperada).toISOString();
+    if (entries.length === 0) {
+      void Swal.fire({
+        title: "Sin artículos",
+        text: "Agregá al menos un artículo antes de registrar la orden.",
+        icon: "warning",
+        confirmButtonColor: "#2563eb",
+      });
+      return;
+    }
+
+    const confirmResult = await Swal.fire({
+      title: "¿Registrar orden de compra?",
+      text: "Se creará la orden con los artículos seleccionados.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Sí, registrar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+    });
+
+    if (!confirmResult.isConfirmed) {
+      return;
+    }
+
+    const fechaIso = fechaEsperada
+      ? new Date(fechaEsperada).toISOString()
+      : undefined;
 
     try {
-      await fetch("/api/v1/orden-compra", {
+      const response = await fetch("/api/v1/orden-compra", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: entries.map((entry) => {
-            return {
-              id: entry.articulo.id,
-              cantidad: entry.cantidad,
-              precio: entry.precio,
-            };
-          }),
+          items: entries.map((entry) => ({
+            id: entry.articulo.id,
+            cantidad: entry.cantidad,
+            precio: entry.precio,
+          })),
           forma_pago: formaPago,
           fecha_esperada: fechaIso,
           id_deposito: idDeposito,
           id_proveedor: idProveedor,
         }),
-      })
-        .then((body) => body.json())
-        .then((json) => {
-          if (json.error) {
-            onError(json);
-            return;
-          }
-          alert(`Orden de compra cargada! ID: ${json.data.id}`);
-          setEntries([]);
-          setCurrEntry({
-            articulo: { id: 0, nombre: "" },
-            precio: 0,
-            cantidad: 0,
-          });
-          setFormaPago(APIFormaPago.EFECTIVO);
-        });
-    } catch (err) {
-      onError(err);
+      });
+
+      const json = await response.json();
+      if (!response.ok || json.error) {
+        throw json;
+      }
+
+      await Swal.fire({
+        title: "¡Orden de compra registrada!",
+        html: `<p class="text-base">Se generó correctamente.</p><p class="mt-2 font-semibold">ID: ${json.data.id}</p>`,
+        icon: "success",
+        confirmButtonText: "Entendido",
+        confirmButtonColor: "#2563eb",
+        background: "#f3f4f6",
+        color: "#1f2937",
+      });
+
+      setEntries([]);
+      setTotalEntries(0);
+      setCurrEntry({
+        articulo: { id: 0, nombre: "" },
+        precio: 0,
+        cantidad: 0,
+      });
+      setFormaPago(APIFormaPago.EFECTIVO);
+    } catch (err: any) {
+      console.error("❌ Error detallado:", err);
+      void Swal.fire({
+        title: "No pudimos registrar la orden",
+        text:
+          err?.error ??
+          err?.message ??
+          "Ocurrió un inconveniente al registrar la orden.",
+        icon: "error",
+        confirmButtonColor: "#2563eb",
+      });
     }
   };
 
