@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const doLogin = async (email: string, password: string): Promise<Maybe<string>> => {
     setIsLoading(true);
     try {
-      return await fetch("/api/v1/ecommerce-auth", {
+      return await fetch("/api/v1/ecommerce/auth", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
