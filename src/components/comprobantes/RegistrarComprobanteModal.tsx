@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import Modal from "@/components/Modal";
-import { formatCurrency } from "@/utils/currency";
 
 // --- INTERFACES (sin cambios) ---
 interface Articulo {
@@ -232,9 +232,12 @@ export default function RegistrarComprobanteModal({
     const precioNum = unformatNumberInput(detalleData.precio_unitario);
 
     if (!detalleData.id_articulo || cantidadNum <= 0 || precioNum <= 0) {
-      alert(
-        "Por favor, selecciona un artículo y asegúrate de que la cantidad y el precio sean mayores a cero."
-      );
+      void Swal.fire({
+        title: "Revisá los datos del artículo",
+        text: "Seleccioná un artículo y asegurate de ingresar cantidad y precio mayores a cero.",
+        icon: "warning",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
 
@@ -263,19 +266,29 @@ export default function RegistrarComprobanteModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !window.confirm("¿Estás seguro de que deseas guardar este comprobante?")
-    )
-      return;
+    const confirmResult = await Swal.fire({
+      title: "¿Guardar comprobante?",
+      text: "El comprobante se registrará para el proveedor seleccionado.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Sí, guardar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#2563eb",
+      cancelButtonColor: "#6b7280",
+    });
+    if (!confirmResult.isConfirmed) return;
     if (
       !headerData.id_proveedor ||
       !headerData.id_tipo_comprobante ||
       !headerData.sucursal ||
       detalles.length === 0
     ) {
-      alert(
-        "Selecciona proveedor, tipo de comprobante, sucursal y agrega al menos un artículo."
-      );
+      void Swal.fire({
+        title: "Datos incompletos",
+        text: "Seleccioná proveedor, tipo de comprobante, sucursal y agregá al menos un artículo.",
+        icon: "warning",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
     try {
@@ -288,17 +301,32 @@ export default function RegistrarComprobanteModal({
       if (res.ok) {
         const totalRespuesta =
           typeof payload?.total === "number" ? payload.total : totalActual;
-        alert(
-           // --- FORMATO APLICADO ---
-          `¡Comprobante guardado con éxito! Total: ${formatMoney(totalRespuesta)}`
-        );
+        await Swal.fire({
+          title: "¡Comprobante registrado!",
+          html: `<p class="text-base">Se guardó correctamente.</p><p class="mt-2 font-semibold">Total: ${formatMoney(totalRespuesta)}</p>`,
+          icon: "success",
+          confirmButtonText: "Entendido",
+          confirmButtonColor: "#2563eb",
+          background: "#f3f4f6",
+          color: "#1f2937",
+        });
         resetForm();
         onSuccess();
       } else {
-        alert(`Error al guardar: ${payload?.error || "Intenta nuevamente"}`);
+        void Swal.fire({
+          title: "No se pudo guardar",
+          text: payload?.error || "Intenta nuevamente.",
+          icon: "error",
+          confirmButtonColor: "#2563eb",
+        });
       }
     } catch (error) {
-      alert("Error de conexión al intentar guardar.");
+      void Swal.fire({
+        title: "Error de conexión",
+        text: "No pudimos comunicarnos con el servidor. Intentá nuevamente.",
+        icon: "error",
+        confirmButtonColor: "#2563eb",
+      });
     }
   };
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Swal from "sweetalert2";
 import RegistrarOrdenPagoModal from "@/components/pagos/RegistrarOrdenPagoModal";
 import DetalleOrdenModal from "@/components/pagos/DetalleOrdenModal";
 
@@ -84,7 +85,12 @@ export default function OrdenPagoPage() {
       }
     } catch (error) {
       console.error("Error fetching data:", error);
-      alert("Error al cargar los datos");
+      void Swal.fire({
+        title: "Error al cargar los datos",
+        text: "No pudimos obtener las órdenes de pago, intentá nuevamente.",
+        icon: "error",
+        confirmButtonColor: "#2563eb",
+      });
     } finally {
       setLoading(false);
     }
@@ -116,15 +122,33 @@ export default function OrdenPagoPage() {
       });
 
       if (res.ok) {
-        alert("¡Orden de pago registrada con éxito!");
+        await Swal.fire({
+          title: "¡Orden de pago registrada!",
+          html: `<p class="text-base">Se generó correctamente.</p>`,
+          icon: "success",
+          confirmButtonText: "Entendido",
+          confirmButtonColor: "#2563eb",
+          background: "#f3f4f6",
+          color: "#1f2937",
+        });
         setShowModalRegistrar(false);
         fetchData();
       } else {
         const errorData = await res.json();
-        alert(`Error al registrar: ${errorData.error}`);
+        void Swal.fire({
+          title: "No se pudo registrar",
+          text: errorData.error || "Intentá nuevamente.",
+          icon: "error",
+          confirmButtonColor: "#2563eb",
+        });
       }
     } catch (error) {
-      alert("Error de conexión al intentar registrar la orden.");
+      void Swal.fire({
+        title: "Error de conexión",
+        text: "No pudimos comunicarnos con el servidor. Intentá nuevamente.",
+        icon: "error",
+        confirmButtonColor: "#2563eb",
+      });
     }
   };
 
@@ -137,7 +161,12 @@ export default function OrdenPagoPage() {
         setShowModalDetalle(true);
       }
     } catch (error) {
-      alert("Error al cargar el detalle");
+      void Swal.fire({
+        title: "Error al cargar el detalle",
+        text: "No pudimos obtener la información de la orden.",
+        icon: "error",
+        confirmButtonColor: "#2563eb",
+      });
     }
   };
 

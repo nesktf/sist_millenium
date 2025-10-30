@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import Modal from "@/components/Modal";
 
 interface Proveedor {
@@ -124,7 +125,12 @@ export default function RegistrarOrdenPagoModal({
     );
     
     if (yaExiste) {
-      alert("Este comprobante ya fue agregado");
+      void Swal.fire({
+        title: "Comprobante ya agregado",
+        text: "Seleccionaste este comprobante previamente.",
+        icon: "info",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
 
@@ -178,15 +184,30 @@ export default function RegistrarOrdenPagoModal({
     e.preventDefault();
 
     if (!formData.numero.trim()) {
-      alert("Por favor, ingrese un número de orden");
+      void Swal.fire({
+        title: "Número de orden requerido",
+        text: "Ingresá un número de orden para continuar.",
+        icon: "warning",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
     if (!formData.id_proveedor) {
-      alert("Por favor, seleccione un proveedor");
+      void Swal.fire({
+        title: "Seleccioná un proveedor",
+        text: "Elegí el proveedor al que corresponde la orden de pago.",
+        icon: "warning",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
     if (comprobantesSeleccionados.length === 0) {
-      alert("Por favor, agregue al menos un comprobante");
+      void Swal.fire({
+        title: "Sin comprobantes",
+        text: "Agregá al menos un comprobante para registrar la orden.",
+        icon: "warning",
+        confirmButtonColor: "#2563eb",
+      });
       return;
     }
 
@@ -194,11 +215,21 @@ export default function RegistrarOrdenPagoModal({
     for (const comp of comprobantesSeleccionados) {
       const monto = unformatNumberInput(comp.monto_pagado);
       if (monto <= 0) {
-        alert(`El monto del comprobante ${comp.comprobante_info.letra}-${comp.comprobante_info.sucursal}-${comp.comprobante_info.numero} debe ser mayor a cero`);
+        void Swal.fire({
+          title: "Monto inválido",
+          text: `El monto del comprobante ${comp.comprobante_info.letra}-${comp.comprobante_info.sucursal}-${comp.comprobante_info.numero} debe ser mayor a cero.`,
+          icon: "warning",
+          confirmButtonColor: "#2563eb",
+        });
         return;
       }
       if (monto > comp.saldo_pendiente) {
-        alert(`El monto del comprobante ${comp.comprobante_info.letra}-${comp.comprobante_info.sucursal}-${comp.comprobante_info.numero} excede el saldo pendiente`);
+        void Swal.fire({
+          title: "Monto excedido",
+          text: `El monto ingresado supera el saldo pendiente del comprobante ${comp.comprobante_info.letra}-${comp.comprobante_info.sucursal}-${comp.comprobante_info.numero}.`,
+          icon: "warning",
+          confirmButtonColor: "#2563eb",
+        });
         return;
       }
     }
