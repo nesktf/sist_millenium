@@ -93,7 +93,7 @@ export default function Sidebar() {
             <ul className="mt-2 ml-4 space-y-1 text-gray-200">
               <li>
                 <Link
-                  href="/"
+                  href="/productos"
                   className="block px-2 py-1 rounded hover:bg-gray-800 hover:text-blue-400 transition-colors"
                 >
                   Productos

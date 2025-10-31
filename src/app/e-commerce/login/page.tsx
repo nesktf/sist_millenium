@@ -46,6 +46,7 @@ export default function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+        {/*
           <div className="flex justify-center mb-4">
             <div className="w-64 h-64 flex items-center justify-center">
               <Image 
@@ -58,6 +59,7 @@ export default function LoginForm() {
               />
             </div>
           </div>
+          */}
           <CardTitle className="text-2xl font-bold text-primary">
             Millenium 
           </CardTitle>
